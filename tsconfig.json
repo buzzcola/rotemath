@@ -1,0 +1,9 @@
+{
+    "compileOnSave": true,
+    "compilerOptions": {
+        "target": "es6",
+        "module": "system",
+        "sourceMap": true,
+        "outFile": "www/script/rotemath.js"
+    }
+}

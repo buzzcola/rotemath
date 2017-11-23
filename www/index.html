@@ -1,0 +1,104 @@
+<html>
+
+<head>
+    <script src="script/rotemath.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        #settings {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -150px;
+            margin-top: -100px;
+            width: 300px;
+            height: 200px;
+            text-align: center;
+            border: 2px solid gray;
+        }
+
+        #game {
+            visibility: hidden;
+        }
+
+        #problem {
+            font-size: 29pt;
+            width: 100%;
+            text-align: center;
+        }
+
+        #scoreContainer {
+            font-size: 12pt;
+            width: 95%;
+            text-align: right;
+            padding-right: 17px;
+        }
+
+        #button-container {
+            width: 100% - 30px;
+            margin-left: 15px;
+            margin-right: 15px;
+            background: rgb(160, 160, 160);
+            overflow-y: auto;
+        }
+
+        #button-container>button {
+            width: 100px;
+            height: 50px;
+            float: left;
+            background: rgb(35, 34, 141);
+            color:rgb(241, 241, 241);
+            margin: 15px;
+            border:0;
+            font-family: sans-serif;
+            font-size: 24pt;
+        }
+
+        #button-container>button:disabled {            
+            background: rgb(110, 110, 158);            
+        }
+    </style>
+</head>
+
+<body>
+    <div id=game>
+        <div id=problem></div>
+        <div id=scoreContainer>Score:
+            <span id=score></span>
+        </div>
+        <div id=button-container></div>
+    </div>
+    <div id=settings>
+        <p>What do you want to practice?</p>
+        <select id=gameMode>
+            <option value=1>Addition</option>
+            <option value=2 selected>Multiplication</option>
+        </select>
+
+        <p>What's the highest number?</p>
+        <p>
+            Up to
+            <select id=gameMax>
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5</option>
+                <option>6</option>
+                <option>7</option>
+                <option>8</option>
+                <option>9</option>
+                <option>10</option>
+                <option>11</option>
+                <option selected>12</option>
+            </select>
+        </p>
+        <p>
+            <button id=start>Start!</button>
+        </p>
+    </div>
+</body>
+
+</html>
