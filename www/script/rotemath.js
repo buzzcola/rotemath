@@ -1,5 +1,49 @@
 var RoteMath;
 (function (RoteMath) {
+    // broke-ass implementation of simple global events.
+    // inspired by https://gist.github.com/wildlyinaccurate/3209556
+    // it was this or EventEmitter and 6,000 files worth of dependencies.
+    /*
+        Basic usage
+
+        Event.on('counted.to::1000', function() {
+            doSomething();
+        });
+
+        for (i = 0; i <= 1000; i++) {
+            // Count to 1000...
+        }
+
+        Event.fire('counted.to::1000'); // doSomething() is called
+    */
+    let Events;
+    (function (Events) {
+        Events[Events["GameStart"] = 0] = "GameStart";
+        Events[Events["GameOver"] = 1] = "GameOver";
+        Events[Events["ProblemLoaded"] = 2] = "ProblemLoaded";
+        Events[Events["CorrectAnswer"] = 3] = "CorrectAnswer";
+        Events[Events["WrongAnswer"] = 4] = "WrongAnswer";
+    })(Events = RoteMath.Events || (RoteMath.Events = {}));
+    class Event {
+        static fire(event) {
+            let queue = this._eventQueues[event];
+            if (!queue) {
+                return;
+            }
+            queue.forEach(f => f());
+        }
+        static on(event, handler) {
+            if (typeof this._eventQueues[event] === 'undefined') {
+                this._eventQueues[event] = [];
+            }
+            this._eventQueues[event].push(handler);
+        }
+    }
+    Event._eventQueues = {};
+    RoteMath.Event = Event;
+})(RoteMath || (RoteMath = {}));
+var RoteMath;
+(function (RoteMath) {
     class Utility {
         static shuffleInPlace(array) {
             // do the Fisher-Yates shuffle:
@@ -109,8 +153,10 @@ var RoteMath;
             return this._state;
         }
         start() {
-            if (this.state === GameState.NotStarted)
+            if (this.state === GameState.NotStarted) {
+                RoteMath.Event.fire(RoteMath.Events.GameStart);
                 this.loadNextProblem();
+            }
         }
         tryAnswer(answer) {
             switch (this._state) {
@@ -123,9 +169,11 @@ var RoteMath;
             if (answer === this.currentProblem.answer) {
                 result = true;
                 this._score++;
+                RoteMath.Event.fire(RoteMath.Events.CorrectAnswer);
             }
             else {
                 result = false;
+                RoteMath.Event.fire(RoteMath.Events.WrongAnswer);
             }
             if (this._problemStack.length > 0) {
                 this.loadNextProblem();
@@ -168,9 +216,11 @@ var RoteMath;
                 case GameState.NotStarted:
                     this._state = GameState.InPlay;
             }
+            RoteMath.Event.fire(RoteMath.Events.ProblemLoaded);
             this._currentProblem = this._problemStack.pop();
         }
         gameOver() {
+            RoteMath.Event.fire(RoteMath.Events.GameOver);
             this._state = GameState.GameOver;
         }
     }

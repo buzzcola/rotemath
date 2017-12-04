@@ -53,8 +53,10 @@ namespace RoteMath {
         }
 
         start(): void {
-            if (this.state === GameState.NotStarted)
+            if (this.state === GameState.NotStarted){
+                Event.fire(Events.GameStart);
                 this.loadNextProblem();
+            }
         }
 
         tryAnswer(answer: number): boolean {
@@ -69,13 +71,15 @@ namespace RoteMath {
             if (answer === this.currentProblem.answer) {
                 result = true;
                 this._score++;
+                Event.fire(Events.CorrectAnswer);
             } else {
                 result = false;
+                Event.fire(Events.WrongAnswer);
             }
 
             if (this._problemStack.length > 0) {
                 this.loadNextProblem();
-            } else {
+            } else {                
                 this.gameOver();
             }
 
@@ -123,10 +127,12 @@ namespace RoteMath {
                     this._state = GameState.InPlay;
             }
 
+            Event.fire(Events.ProblemLoaded)
             this._currentProblem = this._problemStack.pop();
         }
 
         private gameOver() {
+            Event.fire(Events.GameOver);
             this._state = GameState.GameOver;
         }
     }
