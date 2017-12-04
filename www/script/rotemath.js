@@ -1,28 +1,17 @@
 var RoteMath;
 (function (RoteMath) {
     // broke-ass implementation of simple global events.
-    // inspired by https://gist.github.com/wildlyinaccurate/3209556
     // it was this or EventEmitter and 6,000 files worth of dependencies.
-    /*
-        Basic usage
-
-        Event.on('counted.to::1000', function() {
-            doSomething();
-        });
-
-        for (i = 0; i <= 1000; i++) {
-            // Count to 1000...
-        }
-
-        Event.fire('counted.to::1000'); // doSomething() is called
-    */
-    let Events;
+    var Events;
+    // broke-ass implementation of simple global events.
+    // it was this or EventEmitter and 6,000 files worth of dependencies.
     (function (Events) {
         Events[Events["GameStart"] = 0] = "GameStart";
         Events[Events["GameOver"] = 1] = "GameOver";
         Events[Events["ProblemLoaded"] = 2] = "ProblemLoaded";
         Events[Events["CorrectAnswer"] = 3] = "CorrectAnswer";
         Events[Events["WrongAnswer"] = 4] = "WrongAnswer";
+        Events[Events["ScoreChanged"] = 5] = "ScoreChanged";
     })(Events = RoteMath.Events || (RoteMath.Events = {}));
     class Event {
         static fire(event) {
@@ -74,7 +63,7 @@ var RoteMath;
 })(RoteMath || (RoteMath = {}));
 var RoteMath;
 (function (RoteMath) {
-    let ProblemType;
+    var ProblemType;
     (function (ProblemType) {
         ProblemType[ProblemType["Addition"] = 1] = "Addition";
         ProblemType[ProblemType["Multiplication"] = 2] = "Multiplication";
@@ -115,7 +104,7 @@ var RoteMath;
 /// <reference path="Utility.ts" />
 /// <reference path="Problem.ts" />
 (function (RoteMath) {
-    let GameState;
+    var GameState;
     (function (GameState) {
         GameState[GameState["NotStarted"] = 0] = "NotStarted";
         GameState[GameState["InPlay"] = 1] = "InPlay";
@@ -124,7 +113,6 @@ var RoteMath;
     class Game {
         constructor(problemType, max) {
             this._state = GameState.NotStarted; // state of the game.
-            this._score = 0; // current score.
             let problems;
             if (problemType === RoteMath.ProblemType.Multiplication) {
                 problems = RoteMath.Problem.makeMultiplicationProblems(max);
@@ -155,6 +143,7 @@ var RoteMath;
         start() {
             if (this.state === GameState.NotStarted) {
                 RoteMath.Event.fire(RoteMath.Events.GameStart);
+                this.setScore(0);
                 this.loadNextProblem();
             }
         }
@@ -168,7 +157,7 @@ var RoteMath;
             let result;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                this._score++;
+                this.setScore(this.score + 1);
                 RoteMath.Event.fire(RoteMath.Events.CorrectAnswer);
             }
             else {
@@ -216,8 +205,12 @@ var RoteMath;
                 case GameState.NotStarted:
                     this._state = GameState.InPlay;
             }
-            RoteMath.Event.fire(RoteMath.Events.ProblemLoaded);
             this._currentProblem = this._problemStack.pop();
+            RoteMath.Event.fire(RoteMath.Events.ProblemLoaded);
+        }
+        setScore(newScore) {
+            this._score = newScore;
+            RoteMath.Event.fire(RoteMath.Events.ScoreChanged);
         }
         gameOver() {
             RoteMath.Event.fire(RoteMath.Events.GameOver);
@@ -239,6 +232,7 @@ var RoteMath;
     let gameMode;
     let gameMax;
     let buttonContainer;
+    let scoreContainer;
     let score;
     let problem;
     function init() {
@@ -248,9 +242,17 @@ var RoteMath;
         gameMode = $('#gameMode');
         gameMax = $('#gameMax');
         problem = $('#problem');
+        scoreContainer = $('#scoreContainer');
         score = $('#score');
         buttonContainer = $('#button-container');
         start.addEventListener('click', startGame);
+        RoteMath.Event.on(RoteMath.Events.ProblemLoaded, onProblemLoaded);
+        RoteMath.Event.on(RoteMath.Events.CorrectAnswer, onCorrectAnswer);
+        /*
+        Event.on(Events.WrongAnswer, onProblemAnswered);
+        */
+        RoteMath.Event.on(RoteMath.Events.ScoreChanged, onScoreChanged);
+        RoteMath.Event.on(RoteMath.Events.GameOver, onGameOver);
     }
     function startGame() {
         let problemType = +gameMode.value;
@@ -265,36 +267,31 @@ var RoteMath;
             .forEach(i => {
             let button = document.createElement('button');
             button.innerText = '' + i;
-            button.addEventListener('click', answerButtonClick);
+            button.addEventListener('click', onAnswerButtonClick);
             buttonContainer.appendChild(button);
             answerButtons.push(button);
         });
         settingsPanel.style.visibility = 'hidden';
         gamePanel.style.visibility = 'visible';
         game.start();
-        updateProblem();
-        updateScore();
     }
-    function answerButtonClick() {
+    function onAnswerButtonClick() {
+        animateElement(this, 'rubberBand');
         game.tryAnswer(+this.innerText);
-        updateScore();
-        if (game.state === RoteMath.GameState.GameOver) {
-            gameOver();
-        }
-        else {
-            updateProblem();
-        }
     }
-    function updateScore() {
+    function onCorrectAnswer() {
+        animateElement(scoreContainer, 'bounce');
+    }
+    function onScoreChanged() {
         score.innerHTML = '' + game.score;
     }
-    function updateProblem() {
+    function onProblemLoaded() {
         problem.innerHTML = game.currentProblem.question;
         // highlight suggested answers.
         var suggestions = game.getSuggestedAnswers();
         answerButtons.forEach(b => b.disabled = suggestions.indexOf(+b.innerHTML) === -1);
     }
-    function gameOver() {
+    function onGameOver() {
         let message = 'Game Over! You scored ' + game.score + '. ';
         if (game.score == game.maxScore) {
             message += 'That\'s perfect! You did a great job.';
@@ -305,6 +302,20 @@ var RoteMath;
         alert(message);
         gamePanel.style.visibility = 'hidden';
         settingsPanel.style.visibility = 'visible';
+    }
+    function animateElement(el, animationName) {
+        // apply an animate.css animation to an element.
+        let classNames = ['animated', animationName];
+        classNames.forEach(className => {
+            if (el.classList.contains(className)) {
+                el.classList.remove(className);
+            }
+        });
+        window.setTimeout(() => {
+            classNames.forEach(className => {
+                el.classList.add(className);
+            });
+        }, 0);
     }
     document.addEventListener('DOMContentLoaded', init);
 })(RoteMath || (RoteMath = {}));

@@ -13,7 +13,7 @@ namespace RoteMath {
 
         private _state: GameState = GameState.NotStarted; // state of the game.
         private readonly _problemStack: Problem[]; // the problems we'll be doling out.
-        private _score: number = 0; // current score.
+        private _score: number; // current score.
         private _maxScore: number; // maximum possible score.
         private _currentProblem: Problem; // the current problem, if the game is in play.        
         public readonly allAnswers: ReadonlyArray<number>;
@@ -55,6 +55,7 @@ namespace RoteMath {
         start(): void {
             if (this.state === GameState.NotStarted){
                 Event.fire(Events.GameStart);
+                this.setScore(0);
                 this.loadNextProblem();
             }
         }
@@ -70,8 +71,8 @@ namespace RoteMath {
             let result: boolean;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                this._score++;
-                Event.fire(Events.CorrectAnswer);
+                this.setScore(this.score + 1);
+                Event.fire(Events.CorrectAnswer);                
             } else {
                 result = false;
                 Event.fire(Events.WrongAnswer);
@@ -126,9 +127,14 @@ namespace RoteMath {
                 case GameState.NotStarted:
                     this._state = GameState.InPlay;
             }
-
-            Event.fire(Events.ProblemLoaded)
+            
             this._currentProblem = this._problemStack.pop();
+            Event.fire(Events.ProblemLoaded)
+        }
+
+        private setScore(newScore: number){
+            this._score = newScore;
+            Event.fire(Events.ScoreChanged);
         }
 
         private gameOver() {
