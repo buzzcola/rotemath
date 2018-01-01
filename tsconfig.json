@@ -4,6 +4,6 @@
         "target": "es6",
         "module": "system",
         "sourceMap": true,
-        "outFile": "docs/script/rotemath.js"
+        "outFile": "docs/js/rotemath.js"
     }
 }

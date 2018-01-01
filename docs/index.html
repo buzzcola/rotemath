@@ -1,109 +1,129 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
-    <title>Rote Math</title>
-    <script src="script/rotemath.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.5.2/animate.min.css">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <title>RoteMath</title>
 
-    <style>
-        body {
-            font-family: sans-serif;
-        }
-
-        #settings {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            margin-left: -150px;
-            margin-top: -100px;
-            width: 300px;
-            height: 200px;
-            text-align: center;
-            border: 2px solid gray;
-        }
-
-        #game {
-            visibility: hidden;
-        }
-
-        #problem {
-            font-size: 29pt;
-            width: 100%;
-            text-align: center;
-        }
-
-        #scoreContainer {
-            font-size: 12pt;
-            width: 95%;
-            text-align: right;
-            padding-right: 17px;
-        }
-
-        #button-container {
-            width: 100% - 30px;
-            margin-left: 15px;
-            margin-right: 15px;
-            background: rgb(160, 160, 160);
-            overflow-y: auto;
-        }
-
-        #button-container>button {
-            width: 100px;
-            height: 50px;
-            float: left;
-            background: rgb(35, 34, 141);
-            color:rgb(241, 241, 241);
-            margin: 15px;
-            border:0;
-            font-family: sans-serif;
-            font-size: 24pt;
-        }
-
-        #button-container>button:disabled {            
-            background: rgb(110, 110, 158);            
-        }
-    </style>
+  <!-- CSS  -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
 </head>
-
 <body>
-    <div id=game>
-        <div id=problem></div>
-        <div id=scoreContainer>Score:
-            <span id=score></span>
+
+  <nav class="light-blue lighten-1" role="navigation">
+    <div class="nav-wrapper container">
+        <a id="logo-container" href="#" class="brand-logo">
+            Rote Math
+        </a>
+        <ul class="right hide-on-med-and-down">
+            <li>
+                <a href="index.html">Home</a>
+            </li>
+            <li>
+                <a href="play.html">Play</a>
+            </li>
+        </ul>
+
+        <ul id="nav-mobile" class="side-nav">
+            <li>
+                <a href="index.html">Home</a>
+            </li>
+            <li>
+                <a href="play.html">Play</a>
+            </li>
+        </ul>
+        <a href="#" data-activates="nav-mobile" class="button-collapse">
+            <i class="material-icons">menu</i>
+        </a>
+    </div>
+</nav>
+
+<div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br><br>
+      <h1 class="header center orange-text">Rote Math</h1>
+      <div class="row center">
+        <h5 class="header col s12 light">Learn math the hard way! A simple game to help math students memorize basic addition and multiplication problems.</h5>
+      </div>
+      <div class="row center">
+        <a href="play.html" id="download-button" class="btn-large waves-effect waves-light orange">Play</a>
+      </div>
+      <br><br>
+
+    </div>
+  </div>
+
+
+  <div class="container">
+    <div class="section">
+
+      <!--   Icon Section   -->
+      <div class="row">
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="material-icons">flash_on</i></h2>
+            <h5 class="center">Memorize the Times Tables</h5>
+
+            <p class="light">It's very useful to have the times tables up to 12 permanently etched in your brain! Many schools don't teach this anymore.</p>
+          </div>
         </div>
-        <div id=button-container></div>
-    </div>
-    <div id=settings>
-        <p>What do you want to practice?</p>
-        <select id=gameMode>
-            <option value=1>Addition</option>
-            <option value=2 selected>Multiplication</option>
-        </select>
 
-        <p>What's the highest number?</p>
-        <p>
-            Up to
-            <select id=gameMax>
-                <option>1</option>
-                <option>2</option>
-                <option>3</option>
-                <option>4</option>
-                <option>5</option>
-                <option>6</option>
-                <option>7</option>
-                <option>8</option>
-                <option>9</option>
-                <option>10</option>
-                <option>11</option>
-                <option selected>12</option>
-            </select>
-        </p>
-        <p>
-            <button id=start>Start!</button>
-        </p>
-    </div>
-</body>
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="material-icons">flash_on</i></h2>
+            <h5 class="center">Focus on Weak Points</h5>
 
+            <p class="light">(Coming soon!) After completing a game, get information about your best and weakest digits with an opportunity to practice them specifically.</p>
+          </div>
+        </div>
+
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="material-icons">flash_on</i></h2>
+            <h5 class="center">Free and Clear</h5>
+
+            <p class="light">User-supported, no ads of any kind to disrupt the learning experience. (Coming soon: Paypal link.)</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <br><br>
+  </div>
+  
+  <footer class="page-footer orange">
+    <div class="container">
+      <div class="row">
+        <div class="col l6 s12">
+          <h5 class="white-text">About this Site</h5>
+          <p class="grey-text text-lighten-4">My child's school is lovely but they don't teach the times tables anymore. I made this to help her memorize them. Development is ongoing - check us out on Github.</p>
+
+
+        </div>
+        <div class="col l3 s12">
+          <h5 class="white-text">Connect</h5>
+          <ul>
+            <li><a class="white-text" href="https://github.com/buzzcola/rotemath">Github</a></li>
+            <li><a class="white-text" href="mailto:wwwmailacct+rotemathsite@gmail.com">Email me</a></li>
+            <li><a class="white-text" href="#!">Other helpful math links, maybe</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-copyright">
+      <div class="container">
+      (c) 2017 James Orr. All Rights Reserved.
+      </div>
+    </div>
+  </footer>
+
+
+  <!--  Scripts-->
+  <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script src="js/materialize.js"></script>
+  <script src="js/init.js"></script>
+
+  </body>
 </html>

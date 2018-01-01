@@ -265,18 +265,21 @@ var RoteMath;
         }
         game.allAnswers
             .forEach(i => {
-            let button = document.createElement('button');
+            let button = document.createElement('a');
+            for (let c of ['btn', 'waves-effect', 'waves-light', 'grey', 'answer-button']) {
+                button.classList.add(c);
+            }
             button.innerText = '' + i;
             button.addEventListener('click', onAnswerButtonClick);
             buttonContainer.appendChild(button);
             answerButtons.push(button);
         });
-        settingsPanel.style.visibility = 'hidden';
-        gamePanel.style.visibility = 'visible';
+        settingsPanel.classList.add('hide');
+        gamePanel.classList.remove('hide');
         game.start();
     }
     function onAnswerButtonClick() {
-        animateElement(this, 'rubberBand');
+        //animateElement(this, 'rubberBand');
         game.tryAnswer(+this.innerText);
     }
     function onCorrectAnswer() {
@@ -289,7 +292,16 @@ var RoteMath;
         problem.innerHTML = game.currentProblem.question;
         // highlight suggested answers.
         var suggestions = game.getSuggestedAnswers();
-        answerButtons.forEach(b => b.disabled = suggestions.indexOf(+b.innerHTML) === -1);
+        for (let b of answerButtons) {
+            if (suggestions.indexOf(+b.innerHTML) !== -1) {
+                b.classList.add('blue');
+                b.classList.remove('grey');
+            }
+            else {
+                b.classList.add('grey');
+                b.classList.remove('blue');
+            }
+        }
     }
     function onGameOver() {
         let message = 'Game Over! You scored ' + game.score + '. ';
@@ -300,8 +312,8 @@ var RoteMath;
             message += 'Keep on practicing!';
         }
         alert(message);
-        gamePanel.style.visibility = 'hidden';
-        settingsPanel.style.visibility = 'visible';
+        gamePanel.classList.remove('hide');
+        settingsPanel.classList.add('hide');
     }
     function animateElement(el, animationName) {
         // apply an animate.css animation to an element.

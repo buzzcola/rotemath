@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
+    <title>Rote Math</title>
+
+    <!-- CSS  -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection" />
+    <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection" />
+</head>
+
+<body>
+    <nav class="light-blue lighten-1" role="navigation">
+        <div class="nav-wrapper container">
+            <a id="logo-container" href="#" class="brand-logo">
+                Rote Math
+            </a>
+            <ul class="right hide-on-med-and-down">
+                <li>
+                    <a href="index.html">Home</a>
+                </li>
+                <li>
+                    <a href="play.html">Play</a>
+                </li>
+            </ul>
+
+            <ul id="nav-mobile" class="side-nav">
+                <li>
+                    <a href="index.html">Home</a>
+                </li>
+                <li>
+                    <a href="play.html">Play</a>
+                </li>
+            </ul>
+            <a href="#" data-activates="nav-mobile" class="button-collapse">
+                <i class="material-icons">menu</i>
+            </a>
+        </div>
+    </nav>
+    <div class="section no-pad-bot" id="index-banner">
+        <div class="container">
+            <div class="row center">
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="container hide" id="game">
+        <h1 id=problem class="center-align"></h1>
+        <h5 class="right-align" id=scoreContainer>Score:
+            <span id=score></span>
+        </h5>
+        <div id=button-container></div>
+    </div>
+
+    <div class="container">
+
+        <div class="row" id=settings>
+
+            <div class="card blue-grey darken-1">
+                <div class="card-content white-text">
+                    <span class="card-title">Pick your Game!</span>
+                </div>
+                <div class="card-action white-text">
+
+                    <div class="input-field">
+                        <select id="gameMode">
+                            <option value=1>Addition</option>
+                            <option value=2 selected>Multiplication</option>
+                        </select>
+                        <label>Game Mode</label>
+                    </div>
+
+                    <div class="input-field">
+                        <select id=gameMax>
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                            <option>6</option>
+                            <option>7</option>
+                            <option>8</option>
+                            <option>9</option>
+                            <option>10</option>
+                            <option>11</option>
+                            <option selected>12</option>
+                        </select>
+                        <label>Numbers up to</label>
+                    </div>
+
+                    <a class="btn red" id=start>Start!</a>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div style="height:200px;"></div>
+
+    <footer class="page-footer orange">
+        <div class="container">
+            <div class="row">
+                <div class="col l6 s12">
+                    <h5 class="white-text">About this Site</h5>
+                    <p class="grey-text text-lighten-4">My child's school is lovely but they don't teach the times tables anymore. I made this to help her memorize
+                        them. Development is ongoing - check us out on Github.</p>
+
+
+                </div>
+                <div class="col l3 s12">
+                    <h5 class="white-text">Connect</h5>
+                    <ul>
+                        <li>
+                            <a class="white-text" href="https://github.com/buzzcola/rotemath">Github</a>
+                        </li>
+                        <li>
+                            <a class="white-text" href="mailto:wwwmailacct+rotemathsite@gmail.com">Email me</a>
+                        </li>
+                        <li>
+                            <a class="white-text" href="#!">Other helpful math links, maybe</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="footer-copyright">
+            <div class="container">
+                (c) 2017 James Orr. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+
+
+    <!--  Scripts-->
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="js/materialize.js"></script>
+    <script src="js/init.js"></script>
+    <script src="js/rotemath.js"></script>
+
+</body>
+
+</html>
