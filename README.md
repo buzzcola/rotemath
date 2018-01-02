@@ -27,4 +27,5 @@ they get it wrong we should be reinforcing the memorization.
   * Practice modes for individual digits.
   * Show players a chart of their weakest digits. Most incorrect answers / longest time. Maybe offer to practice on the weak parts specifically.
   * Segregate into "levels" - maybe coloured belts like karate. Probably up to 3, 6, 9, 12. Completing the game at a selected level with a perfect score earns you the belt.
+  * Study aids. Different kids learn differently - could just show them some tables to try and memorize visually, links to youtube multiplication songs (there are lots! they are terrible!) Others?
   
