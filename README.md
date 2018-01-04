@@ -10,6 +10,7 @@ I'd give her fifty bucks (basically one million dollars, to a nine year-old) if 
   * Version 2: Learned some TypeScript and rewrote in that, applying a bit of OO design.
   * Version 3: Removed jQuery dependency for vanillaJS. Wow, native browser API's work okay now!
   * Version 4: Added a settings/greeting page where youc an configure the game, and some awful styling.
+  * Version 5: Implemented the Materialize CSS library. More to do but it already looks a lot prettier!
 
 # notes about UI
 At first I thought I'd have kids typing answers, but that's so tedious! Turns out the times tables up to 12 only have 59 distinct answers. So let's make a ton of buttons! Much easier.
@@ -20,9 +21,11 @@ For a future version I want to catch an incorect answer and really ram the corre
 they get it wrong we should be reinforcing the memorization.
 
 # next
-  * I'd like to do a much nicer interface using materialize css or similar.
-  * The code should really be event driven. I think I can use Node's EventEmitter to have RoteMathWeb responding to events thrown by the 
-  Game object instead of checking conditions and calling all sorts of show/hide methods.
-  * Writing this in a SPA framework would also take care of that.
-  * Generate a score that includes time.
-  * Show players a chart of their weakest digits. Most incorrect answers / longest time. Maybe offer to drill on the weak parts specifically.
+  * I'd like to add a lot more game refinements: 
+  * Visual indicator of incorrect answers. Allow player to keep guessing after an incorrect guess until they get the right one (no score for that though.)
+  * No points for a correct answer after X seconds. Player should be memorizing, not working out the products.
+  * Practice modes for individual digits.
+  * Show players a chart of their weakest digits. Most incorrect answers / longest time. Maybe offer to practice on the weak parts specifically.
+  * Segregate into "levels" - maybe coloured belts like karate. Probably up to 3, 6, 9, 12. Completing the game at a selected level with a perfect score earns you the belt.
+  * Study aids. Different kids learn differently - could just show them some tables to try and memorize visually, links to youtube multiplication songs (there are lots! they are terrible!) Others?
+  
