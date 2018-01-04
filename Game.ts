@@ -6,6 +6,8 @@ namespace RoteMath {
     export enum GameState {
         NotStarted,
         InPlay,
+        IncorrectAnswerGiven,
+        VictoryLap,
         GameOver
     }
 
@@ -22,10 +24,10 @@ namespace RoteMath {
             return this._score;
         }
 
-        get maxScore(): number{
+        get maxScore(): number {
             return this._maxScore;
         }
-        
+
         get currentProblem(): Problem {
             return this._currentProblem;
         }
@@ -34,15 +36,15 @@ namespace RoteMath {
             return this._state;
         }
 
-        constructor(problemType:ProblemType, max:number) {
+        constructor(problemType: ProblemType, max: number) {
             let problems: Problem[];
-            if(problemType === ProblemType.Multiplication) {
+            if (problemType === ProblemType.Multiplication) {
                 problems = Problem.makeMultiplicationProblems(max);
             } else {
                 problems = Problem.makeAdditionProblems(max);
             }
 
-            this._maxScore = problems.length;            
+            this._maxScore = problems.length;
             this.allAnswers = problems
                 .map(p => p.answer) // grab all answers
                 .filter((value, index, self) => self.indexOf(value) === index) // get distinct
@@ -53,7 +55,7 @@ namespace RoteMath {
         }
 
         start(): void {
-            if (this.state === GameState.NotStarted){
+            if (this.state === GameState.NotStarted) {
                 Event.fire(Events.GameStart);
                 this.setScore(0);
                 this.loadNextProblem();
@@ -71,16 +73,20 @@ namespace RoteMath {
             let result: boolean;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                this.setScore(this.score + 1);
-                Event.fire(Events.CorrectAnswer);                
+                if (this._state === GameState.InPlay) {
+                    this.setScore(this.score + 1);
+                }
+                this._state = GameState.VictoryLap;
+                Event.fire(Events.CorrectAnswer);
             } else {
                 result = false;
+                this._state = GameState.IncorrectAnswerGiven;
                 Event.fire(Events.WrongAnswer);
             }
 
             if (this._problemStack.length > 0) {
                 this.loadNextProblem();
-            } else {                
+            } else {
                 this.gameOver();
             }
 
@@ -127,12 +133,12 @@ namespace RoteMath {
                 case GameState.NotStarted:
                     this._state = GameState.InPlay;
             }
-            
+
             this._currentProblem = this._problemStack.pop();
             Event.fire(Events.ProblemLoaded)
         }
 
-        private setScore(newScore: number){
+        private setScore(newScore: number) {
             this._score = newScore;
             Event.fire(Events.ScoreChanged);
         }
