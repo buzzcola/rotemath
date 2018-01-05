@@ -9,9 +9,8 @@ var RoteMath;
         Events[Events["GameStart"] = 0] = "GameStart";
         Events[Events["GameOver"] = 1] = "GameOver";
         Events[Events["ProblemLoaded"] = 2] = "ProblemLoaded";
-        Events[Events["CorrectAnswer"] = 3] = "CorrectAnswer";
-        Events[Events["WrongAnswer"] = 4] = "WrongAnswer";
-        Events[Events["ScoreChanged"] = 5] = "ScoreChanged";
+        Events[Events["ProblemAnswered"] = 3] = "ProblemAnswered";
+        Events[Events["ScoreChanged"] = 4] = "ScoreChanged";
     })(Events = RoteMath.Events || (RoteMath.Events = {}));
     class Event {
         static fire(event) {
@@ -107,8 +106,10 @@ var RoteMath;
     var GameState;
     (function (GameState) {
         GameState[GameState["NotStarted"] = 0] = "NotStarted";
-        GameState[GameState["InPlay"] = 1] = "InPlay";
-        GameState[GameState["GameOver"] = 2] = "GameOver";
+        GameState[GameState["WaitingForFirstAnswer"] = 1] = "WaitingForFirstAnswer";
+        GameState[GameState["WaitingIncorrect"] = 2] = "WaitingIncorrect";
+        GameState[GameState["VictoryLap"] = 3] = "VictoryLap";
+        GameState[GameState["GameOver"] = 4] = "GameOver";
     })(GameState = RoteMath.GameState || (RoteMath.GameState = {}));
     class Game {
         constructor(problemType, max) {
@@ -157,18 +158,23 @@ var RoteMath;
             let result;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                this.setScore(this.score + 1);
-                RoteMath.Event.fire(RoteMath.Events.CorrectAnswer);
+                if (this._state === GameState.WaitingForFirstAnswer) {
+                    this.setScore(this.score + 1);
+                }
+                this._state = GameState.VictoryLap;
+                RoteMath.Event.fire(RoteMath.Events.ProblemAnswered);
             }
             else {
                 result = false;
-                RoteMath.Event.fire(RoteMath.Events.WrongAnswer);
+                this._state = GameState.WaitingIncorrect;
             }
-            if (this._problemStack.length > 0) {
-                this.loadNextProblem();
-            }
-            else {
-                this.gameOver();
+            if (result) {
+                if (this._problemStack.length === 0) {
+                    this.gameOver();
+                }
+                else {
+                    this.loadNextProblem();
+                }
             }
             return result;
         }
@@ -203,10 +209,11 @@ var RoteMath;
                 case GameState.GameOver:
                     throw new Error('Attempt to load next problem in Game Over state.');
                 case GameState.NotStarted:
-                    this._state = GameState.InPlay;
+                    this._state = GameState.WaitingForFirstAnswer;
             }
             this._currentProblem = this._problemStack.pop();
             RoteMath.Event.fire(RoteMath.Events.ProblemLoaded);
+            this._state = GameState.WaitingForFirstAnswer;
         }
         setScore(newScore) {
             this._score = newScore;
@@ -223,7 +230,7 @@ var RoteMath;
 var RoteMath;
 /// <reference path="Game.ts" />
 (function (RoteMath) {
-    let $ = document.querySelector.bind(document); // this is just less typing.
+    let $$ = document.querySelector.bind(document); // this is just less typing.
     let game;
     let settingsPanel;
     let gamePanel;
@@ -235,24 +242,30 @@ var RoteMath;
     let scoreContainer;
     let score;
     let problem;
+    const BTN_INACTIVE = 'grey';
+    const BTN_ACTIVE = 'blue';
+    const BTN_INCORRECT = 'red';
     function init() {
-        settingsPanel = $('#settings');
-        gamePanel = $('#game');
-        start = $('#start');
-        gameMode = $('#gameMode');
-        gameMax = $('#gameMax');
-        problem = $('#problem');
-        scoreContainer = $('#scoreContainer');
-        score = $('#score');
-        buttonContainer = $('#button-container');
+        settingsPanel = $$('#settings');
+        gamePanel = $$('#game');
+        start = $$('#start');
+        gameMode = $$('#gameMode');
+        gameMax = $$('#gameMax');
+        problem = $$('#problem');
+        scoreContainer = $$('#scoreContainer');
+        score = $$('#score');
+        buttonContainer = $$('#button-container');
         start.addEventListener('click', startGame);
         RoteMath.Event.on(RoteMath.Events.ProblemLoaded, onProblemLoaded);
-        RoteMath.Event.on(RoteMath.Events.CorrectAnswer, onCorrectAnswer);
+        RoteMath.Event.on(RoteMath.Events.ProblemAnswered, onCorrectAnswer);
         /*
         Event.on(Events.WrongAnswer, onProblemAnswered);
         */
         RoteMath.Event.on(RoteMath.Events.ScoreChanged, onScoreChanged);
         RoteMath.Event.on(RoteMath.Events.GameOver, onGameOver);
+        $('#gameOver').modal({
+            complete: gameOverCallback
+        });
     }
     function startGame() {
         let problemType = +gameMode.value;
@@ -266,7 +279,7 @@ var RoteMath;
         game.allAnswers
             .forEach(i => {
             let button = document.createElement('a');
-            for (let c of ['btn', 'waves-effect', 'waves-light', 'grey', 'answer-button']) {
+            for (let c of ['btn', BTN_INACTIVE, 'answer-button']) {
                 button.classList.add(c);
             }
             button.innerText = '' + i;
@@ -279,8 +292,12 @@ var RoteMath;
         game.start();
     }
     function onAnswerButtonClick() {
-        //animateElement(this, 'rubberBand');
-        game.tryAnswer(+this.innerText);
+        let answer = +this.innerText;
+        let result = game.tryAnswer(answer);
+        if (!result) {
+            this.classList.remove('blue');
+            this.classList.add('red');
+        }
     }
     function onCorrectAnswer() {
         animateElement(scoreContainer, 'bounce');
@@ -293,13 +310,14 @@ var RoteMath;
         // highlight suggested answers.
         var suggestions = game.getSuggestedAnswers();
         for (let b of answerButtons) {
+            b.classList.remove(BTN_INCORRECT);
             if (suggestions.indexOf(+b.innerHTML) !== -1) {
-                b.classList.add('blue');
-                b.classList.remove('grey');
+                b.classList.add(BTN_ACTIVE);
+                b.classList.remove(BTN_INACTIVE);
             }
             else {
-                b.classList.add('grey');
-                b.classList.remove('blue');
+                b.classList.add(BTN_INACTIVE);
+                b.classList.remove(BTN_ACTIVE);
             }
         }
     }
@@ -311,9 +329,11 @@ var RoteMath;
         else {
             message += 'Keep on practicing!';
         }
-        alert(message);
-        gamePanel.classList.remove('hide');
-        settingsPanel.classList.add('hide');
+        $('#gameOver').modal('open');
+    }
+    function gameOverCallback() {
+        gamePanel.classList.add('hide');
+        settingsPanel.classList.remove('hide');
     }
     function animateElement(el, animationName) {
         // apply an animate.css animation to an element.

@@ -6,8 +6,7 @@ namespace RoteMath {
         GameStart,
         GameOver,
         ProblemLoaded,
-        CorrectAnswer,
-        WrongAnswer,
+        ProblemAnswered,
         ScoreChanged
     }
 

@@ -5,8 +5,8 @@ namespace RoteMath {
 
     export enum GameState {
         NotStarted,
-        InPlay,
-        IncorrectAnswerGiven,
+        WaitingForFirstAnswer,
+        WaitingIncorrect,
         VictoryLap,
         GameOver
     }
@@ -73,21 +73,22 @@ namespace RoteMath {
             let result: boolean;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                if (this._state === GameState.InPlay) {
+                if (this._state === GameState.WaitingForFirstAnswer) {
                     this.setScore(this.score + 1);
                 }
                 this._state = GameState.VictoryLap;
-                Event.fire(Events.CorrectAnswer);
+                Event.fire(Events.ProblemAnswered);
             } else {
                 result = false;
-                this._state = GameState.IncorrectAnswerGiven;
-                Event.fire(Events.WrongAnswer);
+                this._state = GameState.WaitingIncorrect;
             }
 
-            if (this._problemStack.length > 0) {
-                this.loadNextProblem();
-            } else {
-                this.gameOver();
+            if (result) {
+                if (this._problemStack.length === 0) {
+                    this.gameOver();
+                } else {
+                    this.loadNextProblem();
+                }
             }
 
             return result;
@@ -131,11 +132,12 @@ namespace RoteMath {
                 case GameState.GameOver:
                     throw new Error('Attempt to load next problem in Game Over state.');
                 case GameState.NotStarted:
-                    this._state = GameState.InPlay;
+                    this._state = GameState.WaitingForFirstAnswer;
             }
 
             this._currentProblem = this._problemStack.pop();
             Event.fire(Events.ProblemLoaded)
+            this._state = GameState.WaitingForFirstAnswer;
         }
 
         private setScore(newScore: number) {

@@ -2,7 +2,9 @@
 
 namespace RoteMath {
 
-    let $: Function = document.querySelector.bind(document); // this is just less typing.
+    // shim for javascript to use materialize stuff.
+    declare function $(selector:string) : any;
+    let $$: Function = document.querySelector.bind(document); // this is just less typing.
 
     let game: Game;
     let settingsPanel: HTMLElement;
@@ -16,28 +18,36 @@ namespace RoteMath {
     let score: Element;
     let problem: Element;
 
+    const BTN_INACTIVE = 'grey';
+    const BTN_ACTIVE = 'blue';
+    const BTN_INCORRECT = 'red';
+
     function init() {
 
-        settingsPanel = $('#settings');
-        gamePanel = $('#game');
-        start = $('#start');
-        gameMode = $('#gameMode');
-        gameMax = $('#gameMax');
-        problem = $('#problem');
-        scoreContainer = $('#scoreContainer');
-        score = $('#score');
-        buttonContainer = $('#button-container');
+        settingsPanel = $$('#settings');
+        gamePanel = $$('#game');
+        start = $$('#start');
+        gameMode = $$('#gameMode');
+        gameMax = $$('#gameMax');
+        problem = $$('#problem');
+        scoreContainer = $$('#scoreContainer');
+        score = $$('#score');
+        buttonContainer = $$('#button-container');
 
         start.addEventListener('click', startGame);
 
         Event.on(Events.ProblemLoaded, onProblemLoaded);
 
-        Event.on(Events.CorrectAnswer, onCorrectAnswer);
+        Event.on(Events.ProblemAnswered, onCorrectAnswer);
         /*
         Event.on(Events.WrongAnswer, onProblemAnswered);
         */
         Event.on(Events.ScoreChanged, onScoreChanged);
         Event.on(Events.GameOver, onGameOver);
+
+        $('#gameOver').modal({
+            complete: gameOverCallback
+        });
     }
 
     function startGame() {
@@ -54,7 +64,7 @@ namespace RoteMath {
         game.allAnswers
             .forEach(i => {
                 let button = document.createElement('a');
-                for (let c of ['btn', 'waves-effect', 'waves-light', 'grey', 'answer-button']) {
+                for (let c of ['btn', BTN_INACTIVE, 'answer-button']) {
                     button.classList.add(c);
                 }
                 button.innerText = '' + i;
@@ -69,9 +79,13 @@ namespace RoteMath {
         game.start();
     }
 
-    function onAnswerButtonClick() {
-        //animateElement(this, 'rubberBand');
-        game.tryAnswer(+this.innerText);
+    function onAnswerButtonClick() {        
+        let answer = +this.innerText;
+        let result = game.tryAnswer(answer);
+        if(!result) {
+            this.classList.remove('blue');
+            this.classList.add('red');
+        }
     }
 
     function onCorrectAnswer() {
@@ -88,27 +102,32 @@ namespace RoteMath {
         // highlight suggested answers.
         var suggestions = game.getSuggestedAnswers();
         for(let b of answerButtons) {
+            b.classList.remove(BTN_INCORRECT);
             if(suggestions.indexOf(+b.innerHTML) !== -1){
-                b.classList.add('blue');
-                b.classList.remove('grey');
+                b.classList.add(BTN_ACTIVE);
+                b.classList.remove(BTN_INACTIVE);                
             } else {
-                b.classList.add('grey');
-                b.classList.remove('blue');
+                b.classList.add(BTN_INACTIVE);
+                b.classList.remove(BTN_ACTIVE);
             }
         }
     }
 
     function onGameOver() {
         let message = 'Game Over! You scored ' + game.score + '. ';
+        
         if (game.score == game.maxScore) {
             message += 'That\'s perfect! You did a great job.';
         } else {
             message += 'Keep on practicing!';
         }
 
-        alert(message);
-        gamePanel.classList.remove('hide');
-        settingsPanel.classList.add('hide');
+        $('#gameOver').modal('open');
+    }
+
+    function gameOverCallback() {
+        gamePanel.classList.add('hide');
+        settingsPanel.classList.remove('hide');
     }
 
     function animateElement(el: Element, animationName: string) {
