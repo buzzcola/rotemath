@@ -5,47 +5,59 @@ namespace RoteMath {
 
     export enum GameState {
         NotStarted,
-        WaitingForFirstAnswer,
-        WaitingIncorrect,
-        VictoryLap,
+        WaitingForFirstAnswer, // waiting for the first answer and not out of time yet.
+        WaitingYouBlewIt, // time's up for this question or a wrong guess already happened.
+        VictoryLap, // correct answer was given, we're showing the answer before the next question gets loaded.
         GameOver
     }
 
     export class Game {
 
-        private _state: GameState = GameState.NotStarted; // state of the game.
+        private readonly ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
+        private readonly ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
+        
+
+        private _state: GameState = GameState.NotStarted; // state of the game.        
         private readonly _problemStack: Problem[]; // the problems we'll be doling out.
-        private _score: number; // current score.
+        private _score: number;
         private _maxScore: number; // maximum possible score.
         private _currentProblem: Problem; // the current problem, if the game is in play.        
-        public readonly allAnswers: ReadonlyArray<number>;
+        private _currentProblemStartTime: Date;
+        public readonly allPossibleAnswers: ReadonlyArray<number>;
 
-        get score(): number {
+        get timeLeft() {
+            if(this._state !== GameState.WaitingForFirstAnswer) {
+                return 0;
+            }
+
+            let elapsed = (new Date()).getTime() - this._currentProblemStartTime.getTime();
+            return Math.max(0, this.ANSWER_MAX_MS - elapsed);
+        }
+
+        get percentageTimeLeft() {
+            return this.timeLeft / this.ANSWER_MAX_MS;
+        }
+
+        get score() {
             return this._score;
         }
 
-        get maxScore(): number {
+        get maxScore() {
             return this._maxScore;
         }
 
-        get currentProblem(): Problem {
+        get currentProblem() {
             return this._currentProblem;
         }
 
-        get state(): GameState {
+        get state() {
             return this._state;
         }
 
         constructor(problemType: ProblemType, max: number) {
-            let problems: Problem[];
-            if (problemType === ProblemType.Multiplication) {
-                problems = Problem.makeMultiplicationProblems(max);
-            } else {
-                problems = Problem.makeAdditionProblems(max);
-            }
-
+            let problems = Problem.makeProblems(problemType, max);
             this._maxScore = problems.length;
-            this.allAnswers = problems
+            this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
                 .filter((value, index, self) => self.indexOf(value) === index) // get distinct
                 .sort((a, b) => a - b); // sort
@@ -54,7 +66,7 @@ namespace RoteMath {
             this._problemStack = problems;
         }
 
-        start(): void {
+        start() {
             if (this.state === GameState.NotStarted) {
                 Event.fire(Events.GameStart);
                 this.setScore(0);
@@ -63,6 +75,7 @@ namespace RoteMath {
         }
 
         tryAnswer(answer: number): boolean {
+            let notExpired = !!this.timeLeft;
             switch (this._state) {
                 case GameState.GameOver:
                     throw new Error('Attempt to answer in game over state.');
@@ -73,31 +86,30 @@ namespace RoteMath {
             let result: boolean;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                if (this._state === GameState.WaitingForFirstAnswer) {
+                if (this._state === GameState.WaitingForFirstAnswer && notExpired) {
                     this.setScore(this.score + 1);
                 }
                 this._state = GameState.VictoryLap;
-                Event.fire(Events.ProblemAnswered);
+                Event.fire(Events.CorrectAnswer);
+                window.setTimeout(() => {
+                    if (this._problemStack.length === 0) {
+                        this.gameOver();
+                    } else {
+                        this.loadNextProblem();
+                    }
+                }, this.ANSWER_DELAY_MS);
             } else {
                 result = false;
-                this._state = GameState.WaitingIncorrect;
-            }
-
-            if (result) {
-                if (this._problemStack.length === 0) {
-                    this.gameOver();
-                } else {
-                    this.loadNextProblem();
-                }
+                this._state = GameState.WaitingYouBlewIt;
             }
 
             return result;
         }
 
-        getSuggestedAnswers(): number[] {
+        getSuggestedAnswers() {
             // get a range of possible answers to serve as a hint for the user.
 
-            let answerIndex = this.allAnswers.indexOf(this._currentProblem.answer);
+            let answerIndex = this.allPossibleAnswers.indexOf(this._currentProblem.answer);
             let neighbourRange = 2;
             let upperNeighbour = answerIndex + neighbourRange;
             let lowerNeighbour = answerIndex - neighbourRange;
@@ -114,20 +126,20 @@ namespace RoteMath {
                 upperNeighbour++;
             }
 
-            while (upperNeighbour >= this.allAnswers.length) {
+            while (upperNeighbour >= this.allPossibleAnswers.length) {
                 upperNeighbour--;
                 lowerNeighbour--;
             }
 
             let result: number[] = [];
             for (let i = lowerNeighbour; i <= upperNeighbour; i++) {
-                result.push(this.allAnswers[i]);
+                result.push(this.allPossibleAnswers[i]);
             }
 
             return result;
         }
 
-        private loadNextProblem(): void {
+        private loadNextProblem() {
             switch (this._state) {
                 case GameState.GameOver:
                     throw new Error('Attempt to load next problem in Game Over state.');
@@ -136,6 +148,7 @@ namespace RoteMath {
             }
 
             this._currentProblem = this._problemStack.pop();
+            this._currentProblemStartTime = new Date();
             Event.fire(Events.ProblemLoaded)
             this._state = GameState.WaitingForFirstAnswer;
         }

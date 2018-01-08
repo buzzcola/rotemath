@@ -6,28 +6,36 @@ namespace RoteMath {
     }
     
     export class Problem {
-        constructor(public readonly question: string, public readonly answer: number) { }
+        constructor(
+            public readonly type:ProblemType,
+            public readonly left:number,             
+            public readonly right:number) { }
 
-        static makeMultiplicationProblems(max: number): Problem[] {
-            let result = [];
-            for (let i = 1; i <= max; i++) {
-                for (let j = 1; j <= max; j++) {
-                    let question = '' + i + ' x ' + j;
-                    let answer = i * j;
-                    result.push(new Problem(question, answer));
-                }
+        get operator() {
+            if(this.type === ProblemType.Addition) {
+                return '+';
+            } else {
+                return 'x';
             }
-
-            return result;
         }
 
-        static makeAdditionProblems(max: number): Problem[] {
+        get question() {
+            return `${this.left} ${this.operator} ${this.right}`;
+        }
+
+        get answer() {
+            if(this.type === ProblemType.Addition) {
+                return this.left + this.right;
+            } else {
+                return this.left * this.right;
+            }
+        }
+
+        static makeProblems(type:ProblemType, max: number): Problem[] {
             let result = [];
             for (let i = 1; i <= max; i++) {
                 for (let j = 1; j <= max; j++) {
-                    let question = '' + i + ' + ' + j;
-                    let answer = i + j;
-                    result.push(new Problem(question, answer));
+                    result.push(new Problem(type, i, j));
                 }
             }
 
