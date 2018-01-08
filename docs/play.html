@@ -51,6 +51,9 @@
 
     <div class="container hide" id="game">
         <h1 id=problem class="center-align"></h1>
+        <div id="progressBackground" class="progress">
+            <div id="progressBar" class="determinate" style="width:100%;"></div>
+        </div>
         <h5 class="right-align" id=scoreContainer>Score:
             <span id=score></span>
         </h5>
@@ -72,7 +75,7 @@
                             <option value=1>Addition</option>
                             <option value=2 selected>Multiplication</option>
                         </select>
-                        <label>Game Mode</label>
+                        <label>Problem Type</label>
                     </div>
 
                     <div class="input-field">

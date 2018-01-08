@@ -2,14 +2,12 @@ var RoteMath;
 (function (RoteMath) {
     // broke-ass implementation of simple global events.
     // it was this or EventEmitter and 6,000 files worth of dependencies.
-    var Events;
-    // broke-ass implementation of simple global events.
-    // it was this or EventEmitter and 6,000 files worth of dependencies.
+    let Events;
     (function (Events) {
         Events[Events["GameStart"] = 0] = "GameStart";
         Events[Events["GameOver"] = 1] = "GameOver";
         Events[Events["ProblemLoaded"] = 2] = "ProblemLoaded";
-        Events[Events["ProblemAnswered"] = 3] = "ProblemAnswered";
+        Events[Events["CorrectAnswer"] = 3] = "CorrectAnswer";
         Events[Events["ScoreChanged"] = 4] = "ScoreChanged";
     })(Events = RoteMath.Events || (RoteMath.Events = {}));
     class Event {
@@ -62,34 +60,41 @@ var RoteMath;
 })(RoteMath || (RoteMath = {}));
 var RoteMath;
 (function (RoteMath) {
-    var ProblemType;
+    let ProblemType;
     (function (ProblemType) {
         ProblemType[ProblemType["Addition"] = 1] = "Addition";
         ProblemType[ProblemType["Multiplication"] = 2] = "Multiplication";
     })(ProblemType = RoteMath.ProblemType || (RoteMath.ProblemType = {}));
     class Problem {
-        constructor(question, answer) {
-            this.question = question;
-            this.answer = answer;
+        constructor(type, left, right) {
+            this.type = type;
+            this.left = left;
+            this.right = right;
         }
-        static makeMultiplicationProblems(max) {
-            let result = [];
-            for (let i = 1; i <= max; i++) {
-                for (let j = 1; j <= max; j++) {
-                    let question = '' + i + ' x ' + j;
-                    let answer = i * j;
-                    result.push(new Problem(question, answer));
-                }
+        get operator() {
+            if (this.type === ProblemType.Addition) {
+                return '+';
             }
-            return result;
+            else {
+                return 'x';
+            }
         }
-        static makeAdditionProblems(max) {
+        get question() {
+            return `${this.left} ${this.operator} ${this.right}`;
+        }
+        get answer() {
+            if (this.type === ProblemType.Addition) {
+                return this.left + this.right;
+            }
+            else {
+                return this.left * this.right;
+            }
+        }
+        static makeProblems(type, max) {
             let result = [];
             for (let i = 1; i <= max; i++) {
                 for (let j = 1; j <= max; j++) {
-                    let question = '' + i + ' + ' + j;
-                    let answer = i + j;
-                    result.push(new Problem(question, answer));
+                    result.push(new Problem(type, i, j));
                 }
             }
             return result;
@@ -103,31 +108,37 @@ var RoteMath;
 /// <reference path="Utility.ts" />
 /// <reference path="Problem.ts" />
 (function (RoteMath) {
-    var GameState;
+    let GameState;
     (function (GameState) {
         GameState[GameState["NotStarted"] = 0] = "NotStarted";
         GameState[GameState["WaitingForFirstAnswer"] = 1] = "WaitingForFirstAnswer";
-        GameState[GameState["WaitingIncorrect"] = 2] = "WaitingIncorrect";
+        GameState[GameState["WaitingYouBlewIt"] = 2] = "WaitingYouBlewIt";
         GameState[GameState["VictoryLap"] = 3] = "VictoryLap";
         GameState[GameState["GameOver"] = 4] = "GameOver";
     })(GameState = RoteMath.GameState || (RoteMath.GameState = {}));
     class Game {
         constructor(problemType, max) {
-            this._state = GameState.NotStarted; // state of the game.
-            let problems;
-            if (problemType === RoteMath.ProblemType.Multiplication) {
-                problems = RoteMath.Problem.makeMultiplicationProblems(max);
-            }
-            else {
-                problems = RoteMath.Problem.makeAdditionProblems(max);
-            }
+            this.ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
+            this.ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
+            this._state = GameState.NotStarted; // state of the game.        
+            let problems = RoteMath.Problem.makeProblems(problemType, max);
             this._maxScore = problems.length;
-            this.allAnswers = problems
+            this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
                 .filter((value, index, self) => self.indexOf(value) === index) // get distinct
                 .sort((a, b) => a - b); // sort
             RoteMath.Utility.shuffleInPlace(problems);
             this._problemStack = problems;
+        }
+        get timeLeft() {
+            if (this._state !== GameState.WaitingForFirstAnswer) {
+                return 0;
+            }
+            let elapsed = (new Date()).getTime() - this._currentProblemStartTime.getTime();
+            return Math.max(0, this.ANSWER_MAX_MS - elapsed);
+        }
+        get percentageTimeLeft() {
+            return this.timeLeft / this.ANSWER_MAX_MS;
         }
         get score() {
             return this._score;
@@ -149,6 +160,7 @@ var RoteMath;
             }
         }
         tryAnswer(answer) {
+            let notExpired = !!this.timeLeft;
             switch (this._state) {
                 case GameState.GameOver:
                     throw new Error('Attempt to answer in game over state.');
@@ -158,29 +170,29 @@ var RoteMath;
             let result;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                if (this._state === GameState.WaitingForFirstAnswer) {
+                if (this._state === GameState.WaitingForFirstAnswer && notExpired) {
                     this.setScore(this.score + 1);
                 }
                 this._state = GameState.VictoryLap;
-                RoteMath.Event.fire(RoteMath.Events.ProblemAnswered);
+                RoteMath.Event.fire(RoteMath.Events.CorrectAnswer);
+                window.setTimeout(() => {
+                    if (this._problemStack.length === 0) {
+                        this.gameOver();
+                    }
+                    else {
+                        this.loadNextProblem();
+                    }
+                }, this.ANSWER_DELAY_MS);
             }
             else {
                 result = false;
-                this._state = GameState.WaitingIncorrect;
-            }
-            if (result) {
-                if (this._problemStack.length === 0) {
-                    this.gameOver();
-                }
-                else {
-                    this.loadNextProblem();
-                }
+                this._state = GameState.WaitingYouBlewIt;
             }
             return result;
         }
         getSuggestedAnswers() {
             // get a range of possible answers to serve as a hint for the user.
-            let answerIndex = this.allAnswers.indexOf(this._currentProblem.answer);
+            let answerIndex = this.allPossibleAnswers.indexOf(this._currentProblem.answer);
             let neighbourRange = 2;
             let upperNeighbour = answerIndex + neighbourRange;
             let lowerNeighbour = answerIndex - neighbourRange;
@@ -194,13 +206,13 @@ var RoteMath;
                 lowerNeighbour++;
                 upperNeighbour++;
             }
-            while (upperNeighbour >= this.allAnswers.length) {
+            while (upperNeighbour >= this.allPossibleAnswers.length) {
                 upperNeighbour--;
                 lowerNeighbour--;
             }
             let result = [];
             for (let i = lowerNeighbour; i <= upperNeighbour; i++) {
-                result.push(this.allAnswers[i]);
+                result.push(this.allPossibleAnswers[i]);
             }
             return result;
         }
@@ -212,6 +224,7 @@ var RoteMath;
                     this._state = GameState.WaitingForFirstAnswer;
             }
             this._currentProblem = this._problemStack.pop();
+            this._currentProblemStartTime = new Date();
             RoteMath.Event.fire(RoteMath.Events.ProblemLoaded);
             this._state = GameState.WaitingForFirstAnswer;
         }
@@ -242,6 +255,9 @@ var RoteMath;
     let scoreContainer;
     let score;
     let problem;
+    let progressBar;
+    let progressBackground;
+    let progressInterval;
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
     const BTN_INCORRECT = 'red';
@@ -252,16 +268,19 @@ var RoteMath;
         gameMode = $$('#gameMode');
         gameMax = $$('#gameMax');
         problem = $$('#problem');
+        progressBar = $$('#progressBar');
+        progressBackground = $$('#progressBackground');
         scoreContainer = $$('#scoreContainer');
         score = $$('#score');
         buttonContainer = $$('#button-container');
         start.addEventListener('click', startGame);
         RoteMath.Event.on(RoteMath.Events.ProblemLoaded, onProblemLoaded);
-        RoteMath.Event.on(RoteMath.Events.ProblemAnswered, onCorrectAnswer);
         /*
+        Event.on(Events.ProblemAnswered, onCorrectAnswer);
         Event.on(Events.WrongAnswer, onProblemAnswered);
         */
         RoteMath.Event.on(RoteMath.Events.ScoreChanged, onScoreChanged);
+        RoteMath.Event.on(RoteMath.Events.CorrectAnswer, onCorrectAnswer);
         RoteMath.Event.on(RoteMath.Events.GameOver, onGameOver);
         $('#gameOver').modal({
             complete: gameOverCallback
@@ -271,12 +290,16 @@ var RoteMath;
         let problemType = +gameMode.value;
         let max = +gameMax.value;
         game = new RoteMath.Game(problemType, max);
+        if (progressInterval) {
+            window.clearInterval(progressInterval);
+        }
+        progressInterval = window.setInterval(updateTimeLeft, 250);
         // clear out the button div, then make a button for every possible answer.
         answerButtons = [];
         while (buttonContainer.hasChildNodes()) {
             buttonContainer.removeChild(buttonContainer.lastChild);
         }
-        game.allAnswers
+        game.allPossibleAnswers
             .forEach(i => {
             let button = document.createElement('a');
             for (let c of ['btn', BTN_INACTIVE, 'answer-button']) {
@@ -300,7 +323,7 @@ var RoteMath;
         }
     }
     function onCorrectAnswer() {
-        animateElement(scoreContainer, 'bounce');
+        problem.innerHTML += ' = ' + game.currentProblem.answer;
     }
     function onScoreChanged() {
         score.innerHTML = '' + game.score;
@@ -321,6 +344,10 @@ var RoteMath;
             }
         }
     }
+    function updateTimeLeft() {
+        let width = '' + (game.percentageTimeLeft * 100) + '%';
+        progressBar.style.width = width;
+    }
     function onGameOver() {
         let message = 'Game Over! You scored ' + game.score + '. ';
         if (game.score == game.maxScore) {
@@ -334,20 +361,6 @@ var RoteMath;
     function gameOverCallback() {
         gamePanel.classList.add('hide');
         settingsPanel.classList.remove('hide');
-    }
-    function animateElement(el, animationName) {
-        // apply an animate.css animation to an element.
-        let classNames = ['animated', animationName];
-        classNames.forEach(className => {
-            if (el.classList.contains(className)) {
-                el.classList.remove(className);
-            }
-        });
-        window.setTimeout(() => {
-            classNames.forEach(className => {
-                el.classList.add(className);
-            });
-        }, 0);
     }
     document.addEventListener('DOMContentLoaded', init);
 })(RoteMath || (RoteMath = {}));

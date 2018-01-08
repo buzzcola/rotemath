@@ -3,7 +3,7 @@
 namespace RoteMath {
 
     // shim for javascript to use materialize stuff.
-    declare function $(selector:string) : any;
+    declare function $(selector: string): any;
     let $$: Function = document.querySelector.bind(document); // this is just less typing.
 
     let game: Game;
@@ -17,6 +17,9 @@ namespace RoteMath {
     let scoreContainer: Element;
     let score: Element;
     let problem: Element;
+    let progressBar: HTMLDivElement;
+    let progressBackground: HTMLDivElement;
+    let progressInterval: number;
 
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
@@ -30,6 +33,8 @@ namespace RoteMath {
         gameMode = $$('#gameMode');
         gameMax = $$('#gameMax');
         problem = $$('#problem');
+        progressBar = $$('#progressBar');
+        progressBackground = $$('#progressBackground');
         scoreContainer = $$('#scoreContainer');
         score = $$('#score');
         buttonContainer = $$('#button-container');
@@ -38,11 +43,13 @@ namespace RoteMath {
 
         Event.on(Events.ProblemLoaded, onProblemLoaded);
 
-        Event.on(Events.ProblemAnswered, onCorrectAnswer);
         /*
+        Event.on(Events.ProblemAnswered, onCorrectAnswer);        
         Event.on(Events.WrongAnswer, onProblemAnswered);
         */
+
         Event.on(Events.ScoreChanged, onScoreChanged);
+        Event.on(Events.CorrectAnswer, onCorrectAnswer);
         Event.on(Events.GameOver, onGameOver);
 
         $('#gameOver').modal({
@@ -54,6 +61,10 @@ namespace RoteMath {
         let problemType: ProblemType = +gameMode.value;
         let max: number = +gameMax.value;
         game = new Game(problemType, max);
+        if (progressInterval) {
+            window.clearInterval(progressInterval);
+        }
+        progressInterval = window.setInterval(updateTimeLeft, 250);
 
         // clear out the button div, then make a button for every possible answer.
         answerButtons = [];
@@ -61,7 +72,7 @@ namespace RoteMath {
             buttonContainer.removeChild(buttonContainer.lastChild);
         }
 
-        game.allAnswers
+        game.allPossibleAnswers
             .forEach(i => {
                 let button = document.createElement('a');
                 for (let c of ['btn', BTN_INACTIVE, 'answer-button']) {
@@ -79,17 +90,17 @@ namespace RoteMath {
         game.start();
     }
 
-    function onAnswerButtonClick() {        
+    function onAnswerButtonClick() {
         let answer = +this.innerText;
         let result = game.tryAnswer(answer);
-        if(!result) {
+        if (!result) {
             this.classList.remove('blue');
             this.classList.add('red');
         }
     }
 
     function onCorrectAnswer() {
-        animateElement(scoreContainer, 'bounce');
+        problem.innerHTML += ' = ' + game.currentProblem.answer;
     }
 
     function onScoreChanged() {
@@ -101,11 +112,11 @@ namespace RoteMath {
 
         // highlight suggested answers.
         var suggestions = game.getSuggestedAnswers();
-        for(let b of answerButtons) {
+        for (let b of answerButtons) {
             b.classList.remove(BTN_INCORRECT);
-            if(suggestions.indexOf(+b.innerHTML) !== -1){
+            if (suggestions.indexOf(+b.innerHTML) !== -1) {
                 b.classList.add(BTN_ACTIVE);
-                b.classList.remove(BTN_INACTIVE);                
+                b.classList.remove(BTN_INACTIVE);
             } else {
                 b.classList.add(BTN_INACTIVE);
                 b.classList.remove(BTN_ACTIVE);
@@ -113,9 +124,14 @@ namespace RoteMath {
         }
     }
 
+    function updateTimeLeft() {        
+        let width = '' + (game.percentageTimeLeft * 100) + '%';
+        progressBar.style.width = width;
+    }
+
     function onGameOver() {
         let message = 'Game Over! You scored ' + game.score + '. ';
-        
+
         if (game.score == game.maxScore) {
             message += 'That\'s perfect! You did a great job.';
         } else {
@@ -128,21 +144,6 @@ namespace RoteMath {
     function gameOverCallback() {
         gamePanel.classList.add('hide');
         settingsPanel.classList.remove('hide');
-    }
-
-    function animateElement(el: Element, animationName: string) {
-        // apply an animate.css animation to an element.
-        let classNames = ['animated', animationName];
-        classNames.forEach(className => {
-            if (el.classList.contains(className)) {
-                el.classList.remove(className);
-            }
-        });
-        window.setTimeout(() => {
-            classNames.forEach(className => {
-                el.classList.add(className);
-            });
-        }, 0);
     }
 
     document.addEventListener('DOMContentLoaded', init);
