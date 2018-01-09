@@ -1,4 +1,7 @@
 namespace RoteMath {
+
+    type Point2 = { [dimension: string]: number, x: number, y: number };
+
     export class Utility {
         static shuffleInPlace(array: any[]) {
             // do the Fisher-Yates shuffle:
@@ -28,6 +31,20 @@ namespace RoteMath {
             min = Math.ceil(min);
             max = Math.floor(max);
             return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+        }
+
+        static range(size: number) {
+            return [...Array(size).keys()];
+        }
+                
+        static range2(size1: number, size2: number = undefined): Point2[] {
+            let result: Point2[] = [];
+            for (let i of this.range(size1)) {
+                for (let j of this.range(size2 || size1)) {
+                    result.push({ x: i, y: j });
+                }
+            }
+            return result;
         }
     }
 }

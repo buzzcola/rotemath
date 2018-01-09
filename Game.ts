@@ -3,6 +3,11 @@
 
 namespace RoteMath {
 
+    export enum GameMode {
+        Competitive = 1, // answer questions up to a certain number to earn the belt! 
+        Practice // practice on particular digits.
+    }
+
     export enum GameState {
         NotStarted,
         WaitingForFirstAnswer, // waiting for the first answer and not out of time yet.
@@ -15,7 +20,7 @@ namespace RoteMath {
 
         private readonly ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
         private readonly ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
-        
+
 
         private _state: GameState = GameState.NotStarted; // state of the game.        
         private readonly _problemStack: Problem[]; // the problems we'll be doling out.
@@ -26,7 +31,7 @@ namespace RoteMath {
         public readonly allPossibleAnswers: ReadonlyArray<number>;
 
         get timeLeft() {
-            if(this._state !== GameState.WaitingForFirstAnswer) {
+            if (this._state !== GameState.WaitingForFirstAnswer) {
                 return 0;
             }
 
@@ -54,8 +59,8 @@ namespace RoteMath {
             return this._state;
         }
 
-        constructor(problemType: ProblemType, max: number) {
-            let problems = Problem.makeProblems(problemType, max);
+        constructor(args: {problemType: ProblemType, gameMode:GameMode, param: number}) {
+            let problems = Problem.makeProblems(args);
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
@@ -75,7 +80,7 @@ namespace RoteMath {
         }
 
         tryAnswer(answer: number): boolean {
-            let notExpired = !!this.timeLeft;
+            let expired = !this.timeLeft;
             switch (this._state) {
                 case GameState.GameOver:
                     throw new Error('Attempt to answer in game over state.');
@@ -86,7 +91,7 @@ namespace RoteMath {
             let result: boolean;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                if (this._state === GameState.WaitingForFirstAnswer && notExpired) {
+                if (this._state === GameState.WaitingForFirstAnswer && !expired) {
                     this.setScore(this.score + 1);
                 }
                 this._state = GameState.VictoryLap;
