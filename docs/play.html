@@ -66,12 +66,10 @@
 
             <div class="card blue-grey darken-1">
                 <div class="card-content white-text">
-                    <span class="card-title">Pick your Game!</span>
-                </div>
-                <div class="card-action white-text">
-
+                    <div class="card-title">Pick your Game!</div>
+                    
                     <div class="input-field">
-                        <select id="gameMode">
+                        <select id="problemType">
                             <option value=1>Addition</option>
                             <option value=2 selected>Multiplication</option>
                         </select>
@@ -79,24 +77,48 @@
                     </div>
 
                     <div class="input-field">
-                        <select id=gameMax>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                            <option>6</option>
-                            <option>7</option>
-                            <option>8</option>
-                            <option>9</option>
-                            <option>10</option>
-                            <option>11</option>
-                            <option selected>12</option>
+                        <select id="gameMode">
+                            <option selected value="2">Practice</option>
+                            <option value="1">Competition</option>
                         </select>
-                        <label>Numbers up to</label>
+                        <label>Game Mode</label>
                     </div>
 
-                    <a class="btn red" id=start>Start!</a>
+                    <div id="practicePanel">
+                        <div class="input-field">
+                            <select id="practiceNumber">
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>6</option>
+                                <option>7</option>
+                                <option>8</option>
+                                <option>9</option>
+                                <option>10</option>
+                                <option>11</option>
+                                <option>12</option>
+                            </select>
+                            <label>Practice a Number</label>
+                        </div>
+                    </div>
+
+                    <div id="competitionPanel" class="hide">
+                        <div class="input-field">
+                            <select id=gameMax>
+                                <option value="3">White Belt (up to 3)</option>
+                                <option value="6">Yellow Belt (up to 6)</option>
+                                <option value="9">Brown Belt (up to 9)</option>
+                                <option value="12">Black Belt! (up to 12)</option>
+                            </select>
+                            <label>Choose your Level</label>
+                        </div>
+                    </div>
+
+                    <div class="card-action white-text">
+                        <a class="btn red" id=start>Start!</a>
+                    </div>
 
                 </div>
             </div>

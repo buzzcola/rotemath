@@ -2,17 +2,17 @@ namespace RoteMath {
 
     export enum ProblemType {
         Addition = 1,
-        Multiplication        
+        Multiplication
     }
-    
+
     export class Problem {
         constructor(
-            public readonly type:ProblemType,
-            public readonly left:number,             
-            public readonly right:number) { }
+            public readonly type: ProblemType,
+            public readonly left: number,
+            public readonly right: number) { }
 
         get operator() {
-            if(this.type === ProblemType.Addition) {
+            if (this.type === ProblemType.Addition) {
                 return '+';
             } else {
                 return 'x';
@@ -24,22 +24,22 @@ namespace RoteMath {
         }
 
         get answer() {
-            if(this.type === ProblemType.Addition) {
+            if (this.type === ProblemType.Addition) {
                 return this.left + this.right;
             } else {
                 return this.left * this.right;
             }
         }
 
-        static makeProblems(type:ProblemType, max: number): Problem[] {
+        static makeProblems(args: { problemType: ProblemType, gameMode: GameMode, param: number }): Problem[] {
             let result = [];
-            for (let i = 1; i <= max; i++) {
-                for (let j = 1; j <= max; j++) {
-                    result.push(new Problem(type, i, j));
-                }
+            if (args.gameMode === GameMode.Competitive) {
+                return Utility.range2(args.param + 1)
+                    .map(p => new Problem(args.problemType, p.x, p.y));
+            } else {
+                return Utility.range(12)
+                    .map(x => new Problem(args.problemType, args.param, x));
             }
-
-            return result;
         }
     }
 }

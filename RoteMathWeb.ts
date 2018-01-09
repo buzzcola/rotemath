@@ -11,7 +11,11 @@ namespace RoteMath {
     let gamePanel: HTMLElement;
     let answerButtons: HTMLAnchorElement[];
     let start: HTMLButtonElement;
+    let problemType: HTMLSelectElement;
     let gameMode: HTMLSelectElement;
+    let practicePanel: HTMLDivElement;
+    let competitionPanel: HTMLDivElement;
+    let practiceNumber: HTMLSelectElement;
     let gameMax: HTMLSelectElement;
     let buttonContainer: Element;
     let scoreContainer: Element;
@@ -30,7 +34,11 @@ namespace RoteMath {
         settingsPanel = $$('#settings');
         gamePanel = $$('#game');
         start = $$('#start');
+        problemType = $$('#problemType');
         gameMode = $$('#gameMode');
+        practicePanel = $$('#practicePanel');
+        competitionPanel = $$('#competitionPanel');
+        practiceNumber = $$('#practiceNumber');
         gameMax = $$('#gameMax');
         problem = $$('#problem');
         progressBar = $$('#progressBar');
@@ -39,15 +47,24 @@ namespace RoteMath {
         score = $$('#score');
         buttonContainer = $$('#button-container');
 
+        // this will be a lot less tedious with some kind of SPA framework, I know.
+        // have to use jQuery for select change instead of addEventListener because
+        // of materialize.
+        $('#gameMode').change(function(event) {
+            let mode: GameMode = +gameMode.value;
+            if(mode === GameMode.Competitive) {
+                competitionPanel.classList.remove('hide');
+                practicePanel.classList.add('hide');                
+            } else {
+                competitionPanel.classList.add('hide');
+                practicePanel.classList.remove('hide');                
+            }
+        });
+
         start.addEventListener('click', startGame);
 
+
         Event.on(Events.ProblemLoaded, onProblemLoaded);
-
-        /*
-        Event.on(Events.ProblemAnswered, onCorrectAnswer);        
-        Event.on(Events.WrongAnswer, onProblemAnswered);
-        */
-
         Event.on(Events.ScoreChanged, onScoreChanged);
         Event.on(Events.CorrectAnswer, onCorrectAnswer);
         Event.on(Events.GameOver, onGameOver);
@@ -58,9 +75,11 @@ namespace RoteMath {
     }
 
     function startGame() {
-        let problemType: ProblemType = +gameMode.value;
-        let max: number = +gameMax.value;
-        game = new Game(problemType, max);
+        let mode: GameMode = +gameMode.value
+        let type: ProblemType = +problemType.value;
+        let param = mode === GameMode.Competitive ? +gameMax.value : +practiceNumber.value;
+        game = new Game({ gameMode: mode, problemType: type, param: param });
+
         if (progressInterval) {
             window.clearInterval(progressInterval);
         }
@@ -124,7 +143,7 @@ namespace RoteMath {
         }
     }
 
-    function updateTimeLeft() {        
+    function updateTimeLeft() {
         let width = '' + (game.percentageTimeLeft * 100) + '%';
         progressBar.style.width = width;
     }

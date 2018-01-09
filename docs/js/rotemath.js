@@ -55,6 +55,18 @@ var RoteMath;
             max = Math.floor(max);
             return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
         }
+        static range(size) {
+            return [...Array(size).keys()];
+        }
+        static range2(size1, size2 = undefined) {
+            let result = [];
+            for (let i of this.range(size1)) {
+                for (let j of this.range(size2 || size1)) {
+                    result.push({ x: i, y: j });
+                }
+            }
+            return result;
+        }
     }
     RoteMath.Utility = Utility;
 })(RoteMath || (RoteMath = {}));
@@ -90,14 +102,16 @@ var RoteMath;
                 return this.left * this.right;
             }
         }
-        static makeProblems(type, max) {
+        static makeProblems(args) {
             let result = [];
-            for (let i = 1; i <= max; i++) {
-                for (let j = 1; j <= max; j++) {
-                    result.push(new Problem(type, i, j));
-                }
+            if (args.gameMode === RoteMath.GameMode.Competitive) {
+                return RoteMath.Utility.range2(args.param + 1)
+                    .map(p => new Problem(args.problemType, p.x, p.y));
             }
-            return result;
+            else {
+                return RoteMath.Utility.range(12)
+                    .map(x => new Problem(args.problemType, args.param, x));
+            }
         }
     }
     RoteMath.Problem = Problem;
@@ -108,6 +122,11 @@ var RoteMath;
 /// <reference path="Utility.ts" />
 /// <reference path="Problem.ts" />
 (function (RoteMath) {
+    let GameMode;
+    (function (GameMode) {
+        GameMode[GameMode["Competitive"] = 1] = "Competitive";
+        GameMode[GameMode["Practice"] = 2] = "Practice"; // practice on particular digits.
+    })(GameMode = RoteMath.GameMode || (RoteMath.GameMode = {}));
     let GameState;
     (function (GameState) {
         GameState[GameState["NotStarted"] = 0] = "NotStarted";
@@ -117,11 +136,11 @@ var RoteMath;
         GameState[GameState["GameOver"] = 4] = "GameOver";
     })(GameState = RoteMath.GameState || (RoteMath.GameState = {}));
     class Game {
-        constructor(problemType, max) {
+        constructor(args) {
             this.ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
             this.ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
             this._state = GameState.NotStarted; // state of the game.        
-            let problems = RoteMath.Problem.makeProblems(problemType, max);
+            let problems = RoteMath.Problem.makeProblems(args);
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
@@ -160,7 +179,7 @@ var RoteMath;
             }
         }
         tryAnswer(answer) {
-            let notExpired = !!this.timeLeft;
+            let expired = !this.timeLeft;
             switch (this._state) {
                 case GameState.GameOver:
                     throw new Error('Attempt to answer in game over state.');
@@ -170,7 +189,7 @@ var RoteMath;
             let result;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                if (this._state === GameState.WaitingForFirstAnswer && notExpired) {
+                if (this._state === GameState.WaitingForFirstAnswer && !expired) {
                     this.setScore(this.score + 1);
                 }
                 this._state = GameState.VictoryLap;
@@ -249,7 +268,11 @@ var RoteMath;
     let gamePanel;
     let answerButtons;
     let start;
+    let problemType;
     let gameMode;
+    let practicePanel;
+    let competitionPanel;
+    let practiceNumber;
     let gameMax;
     let buttonContainer;
     let scoreContainer;
@@ -265,7 +288,11 @@ var RoteMath;
         settingsPanel = $$('#settings');
         gamePanel = $$('#game');
         start = $$('#start');
+        problemType = $$('#problemType');
         gameMode = $$('#gameMode');
+        practicePanel = $$('#practicePanel');
+        competitionPanel = $$('#competitionPanel');
+        practiceNumber = $$('#practiceNumber');
         gameMax = $$('#gameMax');
         problem = $$('#problem');
         progressBar = $$('#progressBar');
@@ -273,12 +300,22 @@ var RoteMath;
         scoreContainer = $$('#scoreContainer');
         score = $$('#score');
         buttonContainer = $$('#button-container');
+        // this will be a lot less tedious with some kind of SPA framework, I know.
+        // have to use jQuery for select change instead of addEventListener because
+        // of materialize.
+        $('#gameMode').change(function (event) {
+            let mode = +gameMode.value;
+            if (mode === RoteMath.GameMode.Competitive) {
+                competitionPanel.classList.remove('hide');
+                practicePanel.classList.add('hide');
+            }
+            else {
+                competitionPanel.classList.add('hide');
+                practicePanel.classList.remove('hide');
+            }
+        });
         start.addEventListener('click', startGame);
         RoteMath.Event.on(RoteMath.Events.ProblemLoaded, onProblemLoaded);
-        /*
-        Event.on(Events.ProblemAnswered, onCorrectAnswer);
-        Event.on(Events.WrongAnswer, onProblemAnswered);
-        */
         RoteMath.Event.on(RoteMath.Events.ScoreChanged, onScoreChanged);
         RoteMath.Event.on(RoteMath.Events.CorrectAnswer, onCorrectAnswer);
         RoteMath.Event.on(RoteMath.Events.GameOver, onGameOver);
@@ -287,9 +324,10 @@ var RoteMath;
         });
     }
     function startGame() {
-        let problemType = +gameMode.value;
-        let max = +gameMax.value;
-        game = new RoteMath.Game(problemType, max);
+        let mode = +gameMode.value;
+        let type = +problemType.value;
+        let param = mode === RoteMath.GameMode.Competitive ? +gameMax.value : +practiceNumber.value;
+        game = new RoteMath.Game({ gameMode: mode, problemType: type, param: param });
         if (progressInterval) {
             window.clearInterval(progressInterval);
         }
