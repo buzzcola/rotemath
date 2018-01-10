@@ -24,14 +24,18 @@ namespace RoteMath {
 
         private _state: GameState = GameState.NotStarted; // state of the game.        
         private readonly _problemStack: Problem[]; // the problems we'll be doling out.
-        private _score: number;
+        private readonly _answers: Answer[] = []; // the user's answers.
         private _maxScore: number; // maximum possible score.
         private _currentProblem: Problem; // the current problem, if the game is in play.        
         private _currentProblemStartTime: Date;
         public readonly allPossibleAnswers: ReadonlyArray<number>;
 
+        get timeElapsed() {            
+            return (new Date()).getTime() - this._currentProblemStartTime.getTime();            
+        }
+
         get timeLeft() {
-            if (this._state !== GameState.WaitingForFirstAnswer) {
+            if (!this.inState(GameState.WaitingForFirstAnswer)) {
                 return 0;
             }
 
@@ -44,7 +48,9 @@ namespace RoteMath {
         }
 
         get score() {
-            return this._score;
+            return this._answers
+                .filter(a => a.success && a.time <= this.ANSWER_MAX_MS)
+                .length;
         }
 
         get maxScore() {
@@ -59,8 +65,9 @@ namespace RoteMath {
             return this._state;
         }
 
-        constructor(args: {problemType: ProblemType, gameMode:GameMode, param: number}) {
+        constructor(args: { problemType: ProblemType, gameMode: GameMode, param: number }) {
             let problems = Problem.makeProblems(args);
+            this._answers = [];
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
@@ -72,30 +79,30 @@ namespace RoteMath {
         }
 
         start() {
-            if (this.state === GameState.NotStarted) {
+            if (this.inState(GameState.NotStarted)) {
                 Event.fire(Events.GameStart);
-                this.setScore(0);
+                Event.fire(Events.ScoreChanged);
                 this.loadNextProblem();
             }
         }
 
         tryAnswer(answer: number): boolean {
-            let expired = !this.timeLeft;
-            switch (this._state) {
-                case GameState.GameOver:
-                    throw new Error('Attempt to answer in game over state.');
-                case GameState.NotStarted:
-                    throw new Error('Attempt to answer before game started.');
-            }
+            let elapsed = this.timeElapsed;            
+
+            if (this.inState(GameState.GameOver, GameState.NotStarted, GameState.VictoryLap)) return;
+            
+            let expired = (elapsed - this._currentProblemStartTime.getTime()) > this.ANSWER_MAX_MS;
 
             let result: boolean;
             if (answer === this.currentProblem.answer) {
-                result = true;
-                if (this._state === GameState.WaitingForFirstAnswer && !expired) {
-                    this.setScore(this.score + 1);
-                }
-                this._state = GameState.VictoryLap;
+                result = true;                
+                let firstTry = this.inState(GameState.WaitingForFirstAnswer);
+                this._answers.push(new Answer(this.currentProblem, elapsed, firstTry, expired));
+                Event.fire(Events.ScoreChanged);
+                
+                this._state = GameState.VictoryLap;                
                 Event.fire(Events.CorrectAnswer);
+                
                 window.setTimeout(() => {
                     if (this._problemStack.length === 0) {
                         this.gameOver();
@@ -145,12 +152,7 @@ namespace RoteMath {
         }
 
         private loadNextProblem() {
-            switch (this._state) {
-                case GameState.GameOver:
-                    throw new Error('Attempt to load next problem in Game Over state.');
-                case GameState.NotStarted:
-                    this._state = GameState.WaitingForFirstAnswer;
-            }
+            if (this.inState(GameState.GameOver)) return;
 
             this._currentProblem = this._problemStack.pop();
             this._currentProblemStartTime = new Date();
@@ -158,14 +160,13 @@ namespace RoteMath {
             this._state = GameState.WaitingForFirstAnswer;
         }
 
-        private setScore(newScore: number) {
-            this._score = newScore;
-            Event.fire(Events.ScoreChanged);
-        }
-
         private gameOver() {
             Event.fire(Events.GameOver);
             this._state = GameState.GameOver;
+        }
+
+        private inState(...states: GameState[]) {
+            return states.indexOf(this._state) > -1;
         }
     }
 }

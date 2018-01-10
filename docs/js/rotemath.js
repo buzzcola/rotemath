@@ -1,8 +1,25 @@
 var RoteMath;
 (function (RoteMath) {
+    class Answer {
+        constructor(problem, time, firstTry, expired) {
+            this.problem = problem;
+            this.time = time;
+            this.firstTry = firstTry;
+            this.expired = expired;
+        }
+        get success() {
+            return this.firstTry && !this.expired;
+        }
+    }
+    RoteMath.Answer = Answer;
+})(RoteMath || (RoteMath = {}));
+var RoteMath;
+(function (RoteMath) {
     // broke-ass implementation of simple global events.
     // it was this or EventEmitter and 6,000 files worth of dependencies.
-    let Events;
+    var Events;
+    // broke-ass implementation of simple global events.
+    // it was this or EventEmitter and 6,000 files worth of dependencies.
     (function (Events) {
         Events[Events["GameStart"] = 0] = "GameStart";
         Events[Events["GameOver"] = 1] = "GameOver";
@@ -72,7 +89,7 @@ var RoteMath;
 })(RoteMath || (RoteMath = {}));
 var RoteMath;
 (function (RoteMath) {
-    let ProblemType;
+    var ProblemType;
     (function (ProblemType) {
         ProblemType[ProblemType["Addition"] = 1] = "Addition";
         ProblemType[ProblemType["Multiplication"] = 2] = "Multiplication";
@@ -122,12 +139,12 @@ var RoteMath;
 /// <reference path="Utility.ts" />
 /// <reference path="Problem.ts" />
 (function (RoteMath) {
-    let GameMode;
+    var GameMode;
     (function (GameMode) {
         GameMode[GameMode["Competitive"] = 1] = "Competitive";
         GameMode[GameMode["Practice"] = 2] = "Practice"; // practice on particular digits.
     })(GameMode = RoteMath.GameMode || (RoteMath.GameMode = {}));
-    let GameState;
+    var GameState;
     (function (GameState) {
         GameState[GameState["NotStarted"] = 0] = "NotStarted";
         GameState[GameState["WaitingForFirstAnswer"] = 1] = "WaitingForFirstAnswer";
@@ -140,7 +157,9 @@ var RoteMath;
             this.ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
             this.ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
             this._state = GameState.NotStarted; // state of the game.        
+            this._answers = []; // the user's answers.
             let problems = RoteMath.Problem.makeProblems(args);
+            this._answers = [];
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
@@ -149,8 +168,11 @@ var RoteMath;
             RoteMath.Utility.shuffleInPlace(problems);
             this._problemStack = problems;
         }
+        get timeElapsed() {
+            return (new Date()).getTime() - this._currentProblemStartTime.getTime();
+        }
         get timeLeft() {
-            if (this._state !== GameState.WaitingForFirstAnswer) {
+            if (!this.inState(GameState.WaitingForFirstAnswer)) {
                 return 0;
             }
             let elapsed = (new Date()).getTime() - this._currentProblemStartTime.getTime();
@@ -160,7 +182,9 @@ var RoteMath;
             return this.timeLeft / this.ANSWER_MAX_MS;
         }
         get score() {
-            return this._score;
+            return this._answers
+                .filter(a => a.success && a.time <= this.ANSWER_MAX_MS)
+                .length;
         }
         get maxScore() {
             return this._maxScore;
@@ -172,26 +196,23 @@ var RoteMath;
             return this._state;
         }
         start() {
-            if (this.state === GameState.NotStarted) {
+            if (this.inState(GameState.NotStarted)) {
                 RoteMath.Event.fire(RoteMath.Events.GameStart);
-                this.setScore(0);
+                RoteMath.Event.fire(RoteMath.Events.ScoreChanged);
                 this.loadNextProblem();
             }
         }
         tryAnswer(answer) {
-            let expired = !this.timeLeft;
-            switch (this._state) {
-                case GameState.GameOver:
-                    throw new Error('Attempt to answer in game over state.');
-                case GameState.NotStarted:
-                    throw new Error('Attempt to answer before game started.');
-            }
+            let elapsed = this.timeElapsed;
+            if (this.inState(GameState.GameOver, GameState.NotStarted, GameState.VictoryLap))
+                return;
+            let expired = (elapsed - this._currentProblemStartTime.getTime()) > this.ANSWER_MAX_MS;
             let result;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                if (this._state === GameState.WaitingForFirstAnswer && !expired) {
-                    this.setScore(this.score + 1);
-                }
+                let firstTry = this.inState(GameState.WaitingForFirstAnswer);
+                this._answers.push(new RoteMath.Answer(this.currentProblem, elapsed, firstTry, expired));
+                RoteMath.Event.fire(RoteMath.Events.ScoreChanged);
                 this._state = GameState.VictoryLap;
                 RoteMath.Event.fire(RoteMath.Events.CorrectAnswer);
                 window.setTimeout(() => {
@@ -236,24 +257,19 @@ var RoteMath;
             return result;
         }
         loadNextProblem() {
-            switch (this._state) {
-                case GameState.GameOver:
-                    throw new Error('Attempt to load next problem in Game Over state.');
-                case GameState.NotStarted:
-                    this._state = GameState.WaitingForFirstAnswer;
-            }
+            if (this.inState(GameState.GameOver))
+                return;
             this._currentProblem = this._problemStack.pop();
             this._currentProblemStartTime = new Date();
             RoteMath.Event.fire(RoteMath.Events.ProblemLoaded);
             this._state = GameState.WaitingForFirstAnswer;
         }
-        setScore(newScore) {
-            this._score = newScore;
-            RoteMath.Event.fire(RoteMath.Events.ScoreChanged);
-        }
         gameOver() {
             RoteMath.Event.fire(RoteMath.Events.GameOver);
             this._state = GameState.GameOver;
+        }
+        inState(...states) {
+            return states.indexOf(this._state) > -1;
         }
     }
     RoteMath.Game = Game;
