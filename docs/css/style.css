@@ -17,3 +17,24 @@
   margin:5px;
   padding:0; /* fixes centering issues. */
 }
+
+table.resultsGrid > tr:first-child {
+  font-weight:bold;
+}
+
+table.resultsGrid > tr > td:first-child {
+  font-weight:bold;
+}
+
+table.resultsGrid > tr > td:not(td:first-child) {
+  width:3em;
+  padding:0.5em;
+}
+
+table.resultsGrid td.success {
+  background-color:green;
+}
+
+table.resultsGrid td.failure {
+  background-color:red;
+}

@@ -17,9 +17,7 @@ var RoteMath;
 (function (RoteMath) {
     // broke-ass implementation of simple global events.
     // it was this or EventEmitter and 6,000 files worth of dependencies.
-    var Events;
-    // broke-ass implementation of simple global events.
-    // it was this or EventEmitter and 6,000 files worth of dependencies.
+    let Events;
     (function (Events) {
         Events[Events["GameStart"] = 0] = "GameStart";
         Events[Events["GameOver"] = 1] = "GameOver";
@@ -89,7 +87,7 @@ var RoteMath;
 })(RoteMath || (RoteMath = {}));
 var RoteMath;
 (function (RoteMath) {
-    var ProblemType;
+    let ProblemType;
     (function (ProblemType) {
         ProblemType[ProblemType["Addition"] = 1] = "Addition";
         ProblemType[ProblemType["Multiplication"] = 2] = "Multiplication";
@@ -126,7 +124,7 @@ var RoteMath;
                     .map(p => new Problem(args.problemType, p.x, p.y));
             }
             else {
-                return RoteMath.Utility.range(12)
+                return RoteMath.Utility.range(13)
                     .map(x => new Problem(args.problemType, args.param, x));
             }
         }
@@ -139,12 +137,12 @@ var RoteMath;
 /// <reference path="Utility.ts" />
 /// <reference path="Problem.ts" />
 (function (RoteMath) {
-    var GameMode;
+    let GameMode;
     (function (GameMode) {
         GameMode[GameMode["Competitive"] = 1] = "Competitive";
         GameMode[GameMode["Practice"] = 2] = "Practice"; // practice on particular digits.
     })(GameMode = RoteMath.GameMode || (RoteMath.GameMode = {}));
-    var GameState;
+    let GameState;
     (function (GameState) {
         GameState[GameState["NotStarted"] = 0] = "NotStarted";
         GameState[GameState["WaitingForFirstAnswer"] = 1] = "WaitingForFirstAnswer";
@@ -157,9 +155,9 @@ var RoteMath;
             this.ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
             this.ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
             this._state = GameState.NotStarted; // state of the game.        
-            this._answers = []; // the user's answers.
+            this.answers = []; // the user's answers.
             let problems = RoteMath.Problem.makeProblems(args);
-            this._answers = [];
+            this.answers = [];
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
@@ -182,7 +180,7 @@ var RoteMath;
             return this.timeLeft / this.ANSWER_MAX_MS;
         }
         get score() {
-            return this._answers
+            return this.answers
                 .filter(a => a.success && a.time <= this.ANSWER_MAX_MS)
                 .length;
         }
@@ -211,7 +209,7 @@ var RoteMath;
             if (answer === this.currentProblem.answer) {
                 result = true;
                 let firstTry = this.inState(GameState.WaitingForFirstAnswer);
-                this._answers.push(new RoteMath.Answer(this.currentProblem, elapsed, firstTry, expired));
+                this.answers.push(new RoteMath.Answer(this.currentProblem, elapsed, firstTry, expired));
                 RoteMath.Event.fire(RoteMath.Events.ScoreChanged);
                 this._state = GameState.VictoryLap;
                 RoteMath.Event.fire(RoteMath.Events.CorrectAnswer);
@@ -281,8 +279,6 @@ var RoteMath;
     let $$ = document.querySelector.bind(document); // this is just less typing.
     let game;
     let settingsPanel;
-    let gamePanel;
-    let answerButtons;
     let start;
     let problemType;
     let gameMode;
@@ -290,6 +286,8 @@ var RoteMath;
     let competitionPanel;
     let practiceNumber;
     let gameMax;
+    let gamePanel;
+    let answerButtons;
     let buttonContainer;
     let scoreContainer;
     let score;
@@ -297,6 +295,9 @@ var RoteMath;
     let progressBar;
     let progressBackground;
     let progressInterval;
+    let gameOverPanel;
+    let gameOverMessage;
+    let gameOverGridContainer;
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
     const BTN_INCORRECT = 'red';
@@ -316,10 +317,13 @@ var RoteMath;
         scoreContainer = $$('#scoreContainer');
         score = $$('#score');
         buttonContainer = $$('#button-container');
+        gameOverPanel = $$('#gameOver');
+        gameOverMessage = $$('#gameOverMessage');
+        gameOverGridContainer = $$('#gameOverGridContainer');
         // this will be a lot less tedious with some kind of SPA framework, I know.
         // have to use jQuery for select change instead of addEventListener because
         // of materialize.
-        $('#gameMode').change(function (event) {
+        $(gameMode).change(function (event) {
             let mode = +gameMode.value;
             if (mode === RoteMath.GameMode.Competitive) {
                 competitionPanel.classList.remove('hide');
@@ -410,7 +414,41 @@ var RoteMath;
         else {
             message += 'Keep on practicing!';
         }
+        gameOverGridContainer.innerHTML = '';
+        gameOverGridContainer.appendChild(makeResultTable(game.answers));
+        gameOverMessage.textContent = message;
         $('#gameOver').modal('open');
+    }
+    function makeResultTable(answers) {
+        let minleft = answers.reduce((acc, x) => Math.min(x.problem.left, acc), 0);
+        let maxleft = answers.reduce((acc, x) => Math.max(x.problem.left, acc), 0);
+        let minright = answers.reduce((acc, x) => Math.min(x.problem.right, acc), 0);
+        let maxright = answers.reduce((acc, x) => Math.max(x.problem.right, acc), 0);
+        let table = document.createElement('table');
+        table.classList.add('resultsGrid');
+        let headerRow = table.appendChild(document.createElement('tr'));
+        headerRow.appendChild(document.createElement('td')); // empty corner.
+        for (let right = minright; right <= maxright; right++) {
+            let cell = headerRow.appendChild(document.createElement('td'));
+            cell.textContent = '' + right;
+        }
+        for (let left = minleft; left <= maxleft; left++) {
+            let row = table.appendChild(document.createElement('tr'));
+            let headerCell = row.appendChild(document.createElement('td'));
+            headerCell.textContent = '' + left;
+            for (let right = minright; right <= maxright; right++) {
+                let cell = row.appendChild(document.createElement('td'));
+                //cell.innerText = ' ';
+                let answer = answers.filter(a => a.problem.left === left && a.problem.right === right)[0];
+                if (answer.success) {
+                    cell.classList.add('success');
+                }
+                else {
+                    cell.classList.add('failure');
+                }
+            }
+        }
+        return table;
     }
     function gameOverCallback() {
         gamePanel.classList.add('hide');

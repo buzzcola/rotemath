@@ -3,13 +3,12 @@
 namespace RoteMath {
 
     // shim for javascript to use materialize stuff.
-    declare function $(selector: string): any;
+    declare function $(selector: any): any;
     let $$: Function = document.querySelector.bind(document); // this is just less typing.
 
     let game: Game;
+
     let settingsPanel: HTMLElement;
-    let gamePanel: HTMLElement;
-    let answerButtons: HTMLAnchorElement[];
     let start: HTMLButtonElement;
     let problemType: HTMLSelectElement;
     let gameMode: HTMLSelectElement;
@@ -17,6 +16,9 @@ namespace RoteMath {
     let competitionPanel: HTMLDivElement;
     let practiceNumber: HTMLSelectElement;
     let gameMax: HTMLSelectElement;
+
+    let gamePanel: HTMLElement;
+    let answerButtons: HTMLAnchorElement[];
     let buttonContainer: Element;
     let scoreContainer: Element;
     let score: Element;
@@ -24,6 +26,10 @@ namespace RoteMath {
     let progressBar: HTMLDivElement;
     let progressBackground: HTMLDivElement;
     let progressInterval: number;
+
+    let gameOverPanel: HTMLDivElement;
+    let gameOverMessage: HTMLParagraphElement;
+    let gameOverGridContainer: HTMLDivElement;
 
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
@@ -46,23 +52,25 @@ namespace RoteMath {
         scoreContainer = $$('#scoreContainer');
         score = $$('#score');
         buttonContainer = $$('#button-container');
+        gameOverPanel = $$('#gameOver');
+        gameOverMessage = $$('#gameOverMessage');
+        gameOverGridContainer = $$('#gameOverGridContainer');
 
         // this will be a lot less tedious with some kind of SPA framework, I know.
         // have to use jQuery for select change instead of addEventListener because
         // of materialize.
-        $('#gameMode').change(function(event) {
+        $(gameMode).change(function (event) {
             let mode: GameMode = +gameMode.value;
-            if(mode === GameMode.Competitive) {
+            if (mode === GameMode.Competitive) {
                 competitionPanel.classList.remove('hide');
-                practicePanel.classList.add('hide');                
+                practicePanel.classList.add('hide');
             } else {
                 competitionPanel.classList.add('hide');
-                practicePanel.classList.remove('hide');                
+                practicePanel.classList.remove('hide');
             }
         });
 
         start.addEventListener('click', startGame);
-
 
         Event.on(Events.ProblemLoaded, onProblemLoaded);
         Event.on(Events.ScoreChanged, onScoreChanged);
@@ -157,7 +165,47 @@ namespace RoteMath {
             message += 'Keep on practicing!';
         }
 
+        gameOverGridContainer.innerHTML = '';
+        gameOverGridContainer.appendChild(makeResultTable(game.answers));
+
+        gameOverMessage.textContent = message;
         $('#gameOver').modal('open');
+    }
+
+    function makeResultTable(answers: Answer[]) : HTMLTableElement {
+        let minleft = answers.reduce((acc, x) => Math.min(x.problem.left, acc), 0);
+        let maxleft = answers.reduce((acc, x) => Math.max(x.problem.left, acc), 0);
+        let minright = answers.reduce((acc, x) => Math.min(x.problem.right, acc), 0);
+        let maxright = answers.reduce((acc, x) => Math.max(x.problem.right, acc), 0);
+
+        let table = document.createElement('table');
+        table.classList.add('resultsGrid');
+
+        let headerRow = table.appendChild(document.createElement('tr'));
+        headerRow.appendChild(document.createElement('td')); // empty corner.
+        for(let right = minright; right <= maxright; right++) {
+            let cell = headerRow.appendChild(document.createElement('td'));
+            cell.textContent = '' + right;
+        }
+
+        for(let left = minleft; left <= maxleft; left++) {
+            let row = table.appendChild(document.createElement('tr'));
+            let headerCell = row.appendChild(document.createElement('td'));
+            headerCell.textContent = '' + left;
+
+            for(let right = minright; right <= maxright; right++) {
+                let cell = row.appendChild(document.createElement('td'));
+                //cell.innerText = ' ';
+                let answer = answers.filter(a => a.problem.left === left && a.problem.right === right)[0];
+                if(answer.success) {
+                    cell.classList.add('success');
+                } else {
+                    cell.classList.add('failure');
+                }
+            }
+        }
+
+        return table;
     }
 
     function gameOverCallback() {

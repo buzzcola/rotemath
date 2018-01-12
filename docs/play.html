@@ -107,6 +107,7 @@
                     <div id="competitionPanel" class="hide">
                         <div class="input-field">
                             <select id=gameMax>
+                                <option value="1">TEMP DELETE</option>
                                 <option value="3">White Belt (up to 3)</option>
                                 <option value="6">Yellow Belt (up to 6)</option>
                                 <option value="9">Brown Belt (up to 9)</option>
@@ -125,12 +126,12 @@
         </div>
     </div>
 
-
-    <!-- Modal Structure -->
+    
     <div id="gameOver" class="modal modal-fixed-footer">
         <div class="modal-content">
             <h4>All Done!</h4>
-            <p>Let's see how you did.</p>
+            <p id="gameOverMessage">Let's see how you did.</p>
+            <div id="gameOverGridContainer"></div>
         </div>
         <div class="modal-footer">
             <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat ">Done</a>

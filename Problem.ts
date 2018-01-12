@@ -37,7 +37,7 @@ namespace RoteMath {
                 return Utility.range2(args.param + 1)
                     .map(p => new Problem(args.problemType, p.x, p.y));
             } else {
-                return Utility.range(12)
+                return Utility.range(13)
                     .map(x => new Problem(args.problemType, args.param, x));
             }
         }

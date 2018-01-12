@@ -21,14 +21,13 @@ namespace RoteMath {
         private readonly ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
         private readonly ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
 
-
         private _state: GameState = GameState.NotStarted; // state of the game.        
-        private readonly _problemStack: Problem[]; // the problems we'll be doling out.
-        private readonly _answers: Answer[] = []; // the user's answers.
+        private readonly _problemStack: Problem[]; // the problems we'll be doling out.        
         private _maxScore: number; // maximum possible score.
         private _currentProblem: Problem; // the current problem, if the game is in play.        
         private _currentProblemStartTime: Date;
         public readonly allPossibleAnswers: ReadonlyArray<number>;
+        public readonly answers: Answer[] = []; // the user's answers.
 
         get timeElapsed() {            
             return (new Date()).getTime() - this._currentProblemStartTime.getTime();            
@@ -48,7 +47,7 @@ namespace RoteMath {
         }
 
         get score() {
-            return this._answers
+            return this.answers
                 .filter(a => a.success && a.time <= this.ANSWER_MAX_MS)
                 .length;
         }
@@ -67,7 +66,7 @@ namespace RoteMath {
 
         constructor(args: { problemType: ProblemType, gameMode: GameMode, param: number }) {
             let problems = Problem.makeProblems(args);
-            this._answers = [];
+            this.answers = [];
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
@@ -97,7 +96,7 @@ namespace RoteMath {
             if (answer === this.currentProblem.answer) {
                 result = true;                
                 let firstTry = this.inState(GameState.WaitingForFirstAnswer);
-                this._answers.push(new Answer(this.currentProblem, elapsed, firstTry, expired));
+                this.answers.push(new Answer(this.currentProblem, elapsed, firstTry, expired));
                 Event.fire(Events.ScoreChanged);
                 
                 this._state = GameState.VictoryLap;                
