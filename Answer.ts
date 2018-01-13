@@ -10,5 +10,9 @@ namespace RoteMath {
         get success(): boolean {
             return this.firstTry && !this.expired;
         }
+
+        toString() {
+            return `${this.problem.toString()} 
+        }
     }
 }

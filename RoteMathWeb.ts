@@ -80,6 +80,20 @@ namespace RoteMath {
         $('#gameOver').modal({
             complete: gameOverCallback
         });
+
+        debugTestResultsGrid();
+    }
+
+    function debugTestResultsGrid() {
+        let answers = Problem.makeProblems({problemType:ProblemType.Multiplication, gameMode: GameMode.Competitive, param:3})
+            .map(p => new Answer(p, Math.random() * 5, Math.random() > 0.25 ? true : false, Math.random() > 0.25 ? true : false));
+
+        let table = makeResultTable(answers);
+
+        gameOverGridContainer.innerHTML = '';
+        gameOverGridContainer.appendChild(makeResultTable(answers));
+        gameOverMessage.textContent = "testing";
+        $('#gameOver').modal('open');
     }
 
     function startGame() {
@@ -182,21 +196,26 @@ namespace RoteMath {
         table.classList.add('resultsGrid');
 
         let headerRow = table.appendChild(document.createElement('tr'));
-        headerRow.appendChild(document.createElement('td')); // empty corner.
+        headerRow.appendChild(document.createElement('th')); // empty corner.
         for(let right = minright; right <= maxright; right++) {
-            let cell = headerRow.appendChild(document.createElement('td'));
+            let cell = headerRow.appendChild(document.createElement('th'));
             cell.textContent = '' + right;
         }
 
         for(let left = minleft; left <= maxleft; left++) {
             let row = table.appendChild(document.createElement('tr'));
-            let headerCell = row.appendChild(document.createElement('td'));
+            let headerCell = row.appendChild(document.createElement('th'));
             headerCell.textContent = '' + left;
 
             for(let right = minright; right <= maxright; right++) {
                 let cell = row.appendChild(document.createElement('td'));
-                //cell.innerText = ' ';
                 let answer = answers.filter(a => a.problem.left === left && a.problem.right === right)[0];
+
+                cell.classList.add('tooltipped');
+                cell.attributes['data-position'] = 'bottom';
+                cell.attributes['data-delay'] = '50';
+                cell.attributes['data-tooltip'] = answer.toString();
+                
                 if(answer.success) {
                     cell.classList.add('success');
                 } else {
