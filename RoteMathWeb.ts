@@ -30,6 +30,9 @@ namespace RoteMath {
     let gameOverPanel: HTMLDivElement;
     let gameOverMessage: HTMLParagraphElement;
     let gameOverGridContainer: HTMLDivElement;
+    let practiceSuggestion: HTMLDivElement;
+    let suggestionMessage:HTMLParagraphElement;
+    let practiceSuggestionButton: HTMLAnchorElement;
 
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
@@ -55,6 +58,9 @@ namespace RoteMath {
         gameOverPanel = $$('#gameOver');
         gameOverMessage = $$('#gameOverMessage');
         gameOverGridContainer = $$('#gameOverGridContainer');
+        practiceSuggestion = $$('#practiceSuggestion');
+        suggestionMessage = $$('#suggestionMessage');
+        practiceSuggestionButton = $$('# practiceSuggestionButton');
 
         // this will be a lot less tedious with some kind of SPA framework, I know.
         // have to use jQuery for select change instead of addEventListener because
@@ -85,15 +91,20 @@ namespace RoteMath {
     }
 
     function debugTestResultsGrid() {
-        let answers = Problem.makeProblems({problemType:ProblemType.Multiplication, gameMode: GameMode.Competitive, param:3})
-            .map(p => new Answer(p, Math.random() * 5, Math.random() > 0.25 ? true : false, Math.random() > 0.25 ? true : false));
+        let answers = Problem.makeProblems({ problemType: ProblemType.Multiplication, gameMode: GameMode.Competitive, param: 12 })
+            .map(p => new Answer(p, Math.random() * 5, Math.random() > 0.25 ? true : false, Math.random() > 0.25 ? false : true));
 
         let table = makeResultTable(answers);
 
         gameOverGridContainer.innerHTML = '';
         gameOverGridContainer.appendChild(makeResultTable(answers));
+        initializeTooltips();
         gameOverMessage.textContent = "testing";
         $('#gameOver').modal('open');
+        
+        let worst = getWorstDigit(answers);
+        let message = `You could use some more practice for the number ${worst}.`;
+        practiceSuggestion.innerText = message;
     }
 
     function startGame() {
@@ -171,7 +182,7 @@ namespace RoteMath {
     }
 
     function onGameOver() {
-        let message = 'Game Over! You scored ' + game.score + '. ';
+        let message = `Game Over! You scored ${game.score} out of ${game.maxScore}. `;
 
         if (game.score == game.maxScore) {
             message += 'That\'s perfect! You did a great job.';
@@ -181,12 +192,23 @@ namespace RoteMath {
 
         gameOverGridContainer.innerHTML = '';
         gameOverGridContainer.appendChild(makeResultTable(game.answers));
+        initializeTooltips();
+
+        if (game.gameMode === GameMode.Competitive) {
+            let worst = getWorstDigit(game.answers);
+            let message = 'You could use some more practice for the number ${worst}.';
+            suggestionMessage.innerText = message;
+        }
 
         gameOverMessage.textContent = message;
         $('#gameOver').modal('open');
     }
 
-    function makeResultTable(answers: Answer[]) : HTMLTableElement {
+    function practiceSuggestion() {
+        
+    }
+
+    function makeResultTable(answers: Answer[]): HTMLTableElement {
         let minleft = answers.reduce((acc, x) => Math.min(x.problem.left, acc), 0);
         let maxleft = answers.reduce((acc, x) => Math.max(x.problem.left, acc), 0);
         let minright = answers.reduce((acc, x) => Math.min(x.problem.right, acc), 0);
@@ -197,26 +219,26 @@ namespace RoteMath {
 
         let headerRow = table.appendChild(document.createElement('tr'));
         headerRow.appendChild(document.createElement('th')); // empty corner.
-        for(let right = minright; right <= maxright; right++) {
+        for (let right = minright; right <= maxright; right++) {
             let cell = headerRow.appendChild(document.createElement('th'));
             cell.textContent = '' + right;
         }
 
-        for(let left = minleft; left <= maxleft; left++) {
+        for (let left = minleft; left <= maxleft; left++) {
             let row = table.appendChild(document.createElement('tr'));
             let headerCell = row.appendChild(document.createElement('th'));
             headerCell.textContent = '' + left;
 
-            for(let right = minright; right <= maxright; right++) {
+            for (let right = minright; right <= maxright; right++) {
                 let cell = row.appendChild(document.createElement('td'));
                 let answer = answers.filter(a => a.problem.left === left && a.problem.right === right)[0];
 
                 cell.classList.add('tooltipped');
-                cell.attributes['data-position'] = 'bottom';
-                cell.attributes['data-delay'] = '50';
-                cell.attributes['data-tooltip'] = answer.toString();
-                
-                if(answer.success) {
+                cell.setAttribute('data-position', 'bottom');
+                cell.setAttribute('data-delay', '50');
+                cell.setAttribute('data-tooltip', answer.toString());
+
+                if (answer.success) {
                     cell.classList.add('success');
                 } else {
                     cell.classList.add('failure');
@@ -224,7 +246,24 @@ namespace RoteMath {
             }
         }
 
+        table.style.height = '' + ((maxleft - minleft + 2) * 2) + 'em';
+        table.style.width = '' + ((maxright - minright + 2) * 2) + 'em';
+
         return table;
+    }
+
+    function getWorstDigit(answers: Answer[]) {
+        let correct = answers.filter(a => a.success);
+        let ranks = correct.map(a => a.problem.left)
+            .concat(correct.map(a => a.problem.right))
+            .reduce((acc, d) => { acc.hasOwnProperty(d) ? acc[d]++ : acc[d] = 1; return acc }, {});
+
+        return Object.keys(ranks)
+            .reduce((acc, k) => ranks[k] < ranks[acc] ? k : acc, 0);
+    }
+
+    function initializeTooltips() {
+        $('.tooltipped').tooltip({ delay: 50 });
     }
 
     function gameOverCallback() {

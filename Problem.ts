@@ -41,5 +41,9 @@ namespace RoteMath {
                     .map(x => new Problem(args.problemType, args.param, x));
             }
         }
+
+        toString() {
+            return `${this.left} ${this.operator} ${this.right} = ${this.answer}`;
+        }
     }
 }

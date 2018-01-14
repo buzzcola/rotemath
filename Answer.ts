@@ -12,7 +12,12 @@ namespace RoteMath {
         }
 
         toString() {
-            return `${this.problem.toString()} 
+            let message: string;
+            if (this.success) message = '(Correct!)';
+            else if (!this.firstTry) message = '(Time Out)';
+            else message = '(First Answer was Incorrect)';
+
+            return `${this.problem.toString()} ${message}`;
         }
     }
 }

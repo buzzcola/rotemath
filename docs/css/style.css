@@ -20,30 +20,37 @@
 
 /* results table grid */
 
+table.resultsGrid {
+  margin-left:auto;
+  margin-right:auto;
+}
+
+table.resultsGrid tr {
+  height:2em;
+}
 
 table.resultsGrid th {
   font-weight:bold;
-  width:1em;
   padding:0;
   text-align: center;
+  width:3em;
 }
 
 table.resultsGrid td {
   padding:0;
   border-radius:0;
-  width:1em;
 
   border-width:0.5em;
   border-color:white;  
   border-style: solid;
   border-collapse: separate;
-
+  width:3em;
 }
 
 table.resultsGrid td.success {
-  background-color:green;
+  background-color:rgb(77, 184, 77);
 }
 
 table.resultsGrid td.failure {
-  background-color:red;
+  background-color:rgb(190, 97, 97);
 }

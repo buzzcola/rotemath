@@ -11,10 +11,14 @@ var RoteMath;
             return this.firstTry && !this.expired;
         }
         toString() {
-            return `${this.problem.toString()} 
-        }
-    }
-};
+            let message;
+            if (this.success)
+                message = '(Correct!)';
+            else if (!this.firstTry)
+                message = '(Time Out)';
+            else
+                message = '(First Answer was Incorrect)';
+            return `${this.problem.toString()} ${message}`;
         }
     }
     RoteMath.Answer = Answer;
@@ -134,6 +138,9 @@ var RoteMath;
                     .map(x => new Problem(args.problemType, args.param, x));
             }
         }
+        toString() {
+            return `${this.left} ${this.operator} ${this.right} = ${this.answer}`;
+        }
     }
     RoteMath.Problem = Problem;
 })(RoteMath || (RoteMath = {}));
@@ -164,6 +171,7 @@ var RoteMath;
             this.answers = []; // the user's answers.
             let problems = RoteMath.Problem.makeProblems(args);
             this.answers = [];
+            this.gameMode = args.gameMode;
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
@@ -304,6 +312,9 @@ var RoteMath;
     let gameOverPanel;
     let gameOverMessage;
     let gameOverGridContainer;
+    let practiceSuggestion;
+    let suggestionMessage;
+    let practiceSuggestionButton;
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
     const BTN_INCORRECT = 'red';
@@ -326,6 +337,9 @@ var RoteMath;
         gameOverPanel = $$('#gameOver');
         gameOverMessage = $$('#gameOverMessage');
         gameOverGridContainer = $$('#gameOverGridContainer');
+        practiceSuggestion = $$('#practiceSuggestion');
+        suggestionMessage = $$('#suggestionMessage');
+        practiceSuggestionButton = $$('# practiceSuggestionButton');
         // this will be a lot less tedious with some kind of SPA framework, I know.
         // have to use jQuery for select change instead of addEventListener because
         // of materialize.
@@ -351,13 +365,17 @@ var RoteMath;
         debugTestResultsGrid();
     }
     function debugTestResultsGrid() {
-        let answers = RoteMath.Problem.makeProblems({ problemType: RoteMath.ProblemType.Multiplication, gameMode: RoteMath.GameMode.Competitive, param: 3 })
-            .map(p => new RoteMath.Answer(p, Math.random() * 5, Math.random() > 0.25 ? true : false, Math.random() > 0.25 ? true : false));
+        let answers = RoteMath.Problem.makeProblems({ problemType: RoteMath.ProblemType.Multiplication, gameMode: RoteMath.GameMode.Competitive, param: 12 })
+            .map(p => new RoteMath.Answer(p, Math.random() * 5, Math.random() > 0.25 ? true : false, Math.random() > 0.25 ? false : true));
         let table = makeResultTable(answers);
         gameOverGridContainer.innerHTML = '';
         gameOverGridContainer.appendChild(makeResultTable(answers));
+        initializeTooltips();
         gameOverMessage.textContent = "testing";
         $('#gameOver').modal('open');
+        let worst = getWorstDigit(answers);
+        let message = `You could use some more practice for the number ${worst}.`;
+        practiceSuggestion.innerText = message;
     }
     function startGame() {
         let mode = +gameMode.value;
@@ -423,7 +441,7 @@ var RoteMath;
         progressBar.style.width = width;
     }
     function onGameOver() {
-        let message = 'Game Over! You scored ' + game.score + '. ';
+        let message = `Game Over! You scored ${game.score} out of ${game.maxScore}. `;
         if (game.score == game.maxScore) {
             message += 'That\'s perfect! You did a great job.';
         }
@@ -432,8 +450,16 @@ var RoteMath;
         }
         gameOverGridContainer.innerHTML = '';
         gameOverGridContainer.appendChild(makeResultTable(game.answers));
+        initializeTooltips();
+        if (game.gameMode === RoteMath.GameMode.Competitive) {
+            let worst = getWorstDigit(game.answers);
+            let message = 'You could use some more practice for the number ${worst}.';
+            suggestionMessage.innerText = message;
+        }
         gameOverMessage.textContent = message;
         $('#gameOver').modal('open');
+    }
+    function practiceSuggestion() {
     }
     function makeResultTable(answers) {
         let minleft = answers.reduce((acc, x) => Math.min(x.problem.left, acc), 0);
@@ -456,9 +482,9 @@ var RoteMath;
                 let cell = row.appendChild(document.createElement('td'));
                 let answer = answers.filter(a => a.problem.left === left && a.problem.right === right)[0];
                 cell.classList.add('tooltipped');
-                cell.attributes['data-position'] = 'bottom';
-                cell.attributes['data-delay'] = '50';
-                cell.attributes['data-tooltip'] = answer.toString();
+                cell.setAttribute('data-position', 'bottom');
+                cell.setAttribute('data-delay', '50');
+                cell.setAttribute('data-tooltip', answer.toString());
                 if (answer.success) {
                     cell.classList.add('success');
                 }
@@ -467,7 +493,20 @@ var RoteMath;
                 }
             }
         }
+        table.style.height = '' + ((maxleft - minleft + 2) * 2) + 'em';
+        table.style.width = '' + ((maxright - minright + 2) * 2) + 'em';
         return table;
+    }
+    function getWorstDigit(answers) {
+        let correct = answers.filter(a => a.success);
+        let ranks = correct.map(a => a.problem.left)
+            .concat(correct.map(a => a.problem.right))
+            .reduce((acc, d) => { acc.hasOwnProperty(d) ? acc[d]++ : acc[d] = 1; return acc; }, {});
+        return Object.keys(ranks)
+            .reduce((acc, k) => ranks[k] < ranks[acc] ? k : acc, 0);
+    }
+    function initializeTooltips() {
+        $('.tooltipped').tooltip({ delay: 50 });
     }
     function gameOverCallback() {
         gamePanel.classList.add('hide');

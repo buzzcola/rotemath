@@ -28,6 +28,7 @@ namespace RoteMath {
         private _currentProblemStartTime: Date;
         public readonly allPossibleAnswers: ReadonlyArray<number>;
         public readonly answers: Answer[] = []; // the user's answers.
+        public readonly gameMode:GameMode;
 
         get timeElapsed() {            
             return (new Date()).getTime() - this._currentProblemStartTime.getTime();            
@@ -67,6 +68,7 @@ namespace RoteMath {
         constructor(args: { problemType: ProblemType, gameMode: GameMode, param: number }) {
             let problems = Problem.makeProblems(args);
             this.answers = [];
+            this.gameMode = args.gameMode;
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
