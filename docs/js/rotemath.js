@@ -1,5 +1,30 @@
 var RoteMath;
 (function (RoteMath) {
+    class Answer {
+        constructor(problem, time, firstTry, expired) {
+            this.problem = problem;
+            this.time = time;
+            this.firstTry = firstTry;
+            this.expired = expired;
+        }
+        get success() {
+            return this.firstTry && !this.expired;
+        }
+        toString() {
+            let message;
+            if (this.success)
+                message = '(Correct!)';
+            else if (!this.firstTry)
+                message = '(First Answer was Incorrect)';
+            else
+                message = '(Time Out)';
+            return `${this.problem.toString()} ${message}`;
+        }
+    }
+    RoteMath.Answer = Answer;
+})(RoteMath || (RoteMath = {}));
+var RoteMath;
+(function (RoteMath) {
     // broke-ass implementation of simple global events.
     // it was this or EventEmitter and 6,000 files worth of dependencies.
     let Events;
@@ -109,9 +134,12 @@ var RoteMath;
                     .map(p => new Problem(args.problemType, p.x, p.y));
             }
             else {
-                return RoteMath.Utility.range(12)
+                return RoteMath.Utility.range(13)
                     .map(x => new Problem(args.problemType, args.param, x));
             }
+        }
+        toString() {
+            return `${this.left} ${this.operator} ${this.right} = ${this.answer}`;
         }
     }
     RoteMath.Problem = Problem;
@@ -140,7 +168,10 @@ var RoteMath;
             this.ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
             this.ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
             this._state = GameState.NotStarted; // state of the game.        
+            this.answers = []; // the user's answers.
             let problems = RoteMath.Problem.makeProblems(args);
+            this.answers = [];
+            this.gameMode = args.gameMode;
             this._maxScore = problems.length;
             this.allPossibleAnswers = problems
                 .map(p => p.answer) // grab all answers
@@ -149,8 +180,11 @@ var RoteMath;
             RoteMath.Utility.shuffleInPlace(problems);
             this._problemStack = problems;
         }
+        get timeElapsed() {
+            return (new Date()).getTime() - this._currentProblemStartTime.getTime();
+        }
         get timeLeft() {
-            if (this._state !== GameState.WaitingForFirstAnswer) {
+            if (!this.inState(GameState.WaitingForFirstAnswer)) {
                 return 0;
             }
             let elapsed = (new Date()).getTime() - this._currentProblemStartTime.getTime();
@@ -160,7 +194,9 @@ var RoteMath;
             return this.timeLeft / this.ANSWER_MAX_MS;
         }
         get score() {
-            return this._score;
+            return this.answers
+                .filter(a => a.success)
+                .length;
         }
         get maxScore() {
             return this._maxScore;
@@ -172,26 +208,23 @@ var RoteMath;
             return this._state;
         }
         start() {
-            if (this.state === GameState.NotStarted) {
+            if (this.inState(GameState.NotStarted)) {
                 RoteMath.Event.fire(RoteMath.Events.GameStart);
-                this.setScore(0);
+                RoteMath.Event.fire(RoteMath.Events.ScoreChanged);
                 this.loadNextProblem();
             }
         }
         tryAnswer(answer) {
-            let expired = !this.timeLeft;
-            switch (this._state) {
-                case GameState.GameOver:
-                    throw new Error('Attempt to answer in game over state.');
-                case GameState.NotStarted:
-                    throw new Error('Attempt to answer before game started.');
-            }
+            let elapsed = this.timeElapsed;
+            if (this.inState(GameState.GameOver, GameState.NotStarted, GameState.VictoryLap))
+                return;
+            let expired = elapsed > this.ANSWER_MAX_MS;
             let result;
             if (answer === this.currentProblem.answer) {
                 result = true;
-                if (this._state === GameState.WaitingForFirstAnswer && !expired) {
-                    this.setScore(this.score + 1);
-                }
+                let firstTry = this.inState(GameState.WaitingForFirstAnswer);
+                this.answers.push(new RoteMath.Answer(this.currentProblem, elapsed, firstTry, expired));
+                RoteMath.Event.fire(RoteMath.Events.ScoreChanged);
                 this._state = GameState.VictoryLap;
                 RoteMath.Event.fire(RoteMath.Events.CorrectAnswer);
                 window.setTimeout(() => {
@@ -236,24 +269,19 @@ var RoteMath;
             return result;
         }
         loadNextProblem() {
-            switch (this._state) {
-                case GameState.GameOver:
-                    throw new Error('Attempt to load next problem in Game Over state.');
-                case GameState.NotStarted:
-                    this._state = GameState.WaitingForFirstAnswer;
-            }
+            if (this.inState(GameState.GameOver))
+                return;
             this._currentProblem = this._problemStack.pop();
             this._currentProblemStartTime = new Date();
             RoteMath.Event.fire(RoteMath.Events.ProblemLoaded);
             this._state = GameState.WaitingForFirstAnswer;
         }
-        setScore(newScore) {
-            this._score = newScore;
-            RoteMath.Event.fire(RoteMath.Events.ScoreChanged);
-        }
         gameOver() {
             RoteMath.Event.fire(RoteMath.Events.GameOver);
             this._state = GameState.GameOver;
+        }
+        inState(...states) {
+            return states.indexOf(this._state) > -1;
         }
     }
     RoteMath.Game = Game;
@@ -264,9 +292,8 @@ var RoteMath;
 (function (RoteMath) {
     let $$ = document.querySelector.bind(document); // this is just less typing.
     let game;
+    let worstDigit;
     let settingsPanel;
-    let gamePanel;
-    let answerButtons;
     let start;
     let problemType;
     let gameMode;
@@ -274,6 +301,8 @@ var RoteMath;
     let competitionPanel;
     let practiceNumber;
     let gameMax;
+    let gamePanel;
+    let answerButtons;
     let buttonContainer;
     let scoreContainer;
     let score;
@@ -281,6 +310,13 @@ var RoteMath;
     let progressBar;
     let progressBackground;
     let progressInterval;
+    let gameOverPanel;
+    let gameOverMessage;
+    let gameOverGridContainer;
+    let practiceSuggestion;
+    let suggestionMessage;
+    let practiceSuggestionButton;
+    let startPractice;
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
     const BTN_INCORRECT = 'red';
@@ -300,10 +336,16 @@ var RoteMath;
         scoreContainer = $$('#scoreContainer');
         score = $$('#score');
         buttonContainer = $$('#button-container');
+        gameOverPanel = $$('#gameOver');
+        gameOverMessage = $$('#gameOverMessage');
+        gameOverGridContainer = $$('#gameOverGridContainer');
+        practiceSuggestion = $$('#practiceSuggestion');
+        suggestionMessage = $$('#suggestionMessage');
+        practiceSuggestionButton = $$('#practiceSuggestionButton');
         // this will be a lot less tedious with some kind of SPA framework, I know.
         // have to use jQuery for select change instead of addEventListener because
         // of materialize.
-        $('#gameMode').change(function (event) {
+        $(gameMode).change(function (event) {
             let mode = +gameMode.value;
             if (mode === RoteMath.GameMode.Competitive) {
                 competitionPanel.classList.remove('hide');
@@ -315,6 +357,7 @@ var RoteMath;
             }
         });
         start.addEventListener('click', startGame);
+        practiceSuggestionButton.addEventListener('click', startPracticeSuggestion);
         RoteMath.Event.on(RoteMath.Events.ProblemLoaded, onProblemLoaded);
         RoteMath.Event.on(RoteMath.Events.ScoreChanged, onScoreChanged);
         RoteMath.Event.on(RoteMath.Events.CorrectAnswer, onCorrectAnswer);
@@ -387,18 +430,88 @@ var RoteMath;
         progressBar.style.width = width;
     }
     function onGameOver() {
-        let message = 'Game Over! You scored ' + game.score + '. ';
+        let message = `Game Over! You scored ${game.score} out of ${game.maxScore}. `;
         if (game.score == game.maxScore) {
             message += 'That\'s perfect! You did a great job.';
         }
         else {
             message += 'Keep on practicing!';
         }
+        gameOverGridContainer.innerHTML = '';
+        gameOverGridContainer.appendChild(makeResultTable(game.answers));
+        initializeTooltips();
+        if (game.gameMode === RoteMath.GameMode.Competitive) {
+            worstDigit = getWorstDigit(game.answers);
+            let message = `You could use some more practice for the number ${worstDigit}.`;
+            suggestionMessage.innerText = message;
+            practiceSuggestion.classList.remove('hide');
+        }
+        else {
+            practiceSuggestion.classList.add('hide');
+        }
+        gameOverMessage.textContent = message;
         $('#gameOver').modal('open');
+    }
+    function startPracticeSuggestion() {
+        startPractice = true;
+        $('#gameOver').modal('close');
+    }
+    function makeResultTable(answers) {
+        let minleft = answers.reduce((acc, x) => Math.min(x.problem.left, acc), Number.MAX_SAFE_INTEGER);
+        let maxleft = answers.reduce((acc, x) => Math.max(x.problem.left, acc), Number.MIN_SAFE_INTEGER);
+        let minright = answers.reduce((acc, x) => Math.min(x.problem.right, acc), Number.MAX_SAFE_INTEGER);
+        let maxright = answers.reduce((acc, x) => Math.max(x.problem.right, acc), Number.MIN_SAFE_INTEGER);
+        let table = document.createElement('table');
+        table.classList.add('resultsGrid');
+        let headerRow = table.appendChild(document.createElement('tr'));
+        headerRow.appendChild(document.createElement('th')); // empty corner.
+        for (let right = minright; right <= maxright; right++) {
+            let cell = headerRow.appendChild(document.createElement('th'));
+            cell.textContent = '' + right;
+        }
+        for (let left = minleft; left <= maxleft; left++) {
+            let row = table.appendChild(document.createElement('tr'));
+            let headerCell = row.appendChild(document.createElement('th'));
+            headerCell.textContent = '' + left;
+            for (let right = minright; right <= maxright; right++) {
+                let cell = row.appendChild(document.createElement('td'));
+                let answer = answers.filter(a => a.problem.left === left && a.problem.right === right)[0];
+                cell.classList.add('tooltipped');
+                cell.setAttribute('data-position', 'bottom');
+                cell.setAttribute('data-delay', '50');
+                cell.setAttribute('data-tooltip', answer.toString());
+                if (answer.success) {
+                    cell.classList.add('success');
+                }
+                else {
+                    cell.classList.add('failure');
+                }
+            }
+        }
+        table.style.height = '' + ((maxleft - minleft + 2) * 2) + 'em';
+        table.style.width = '' + ((maxright - minright + 2) * 2) + 'em';
+        return table;
+    }
+    function getWorstDigit(answers) {
+        let correct = answers.filter(a => a.success);
+        let ranks = correct.map(a => a.problem.left)
+            .concat(correct.map(a => a.problem.right))
+            .reduce((acc, d) => { acc.hasOwnProperty(d) ? acc[d]++ : acc[d] = 1; return acc; }, {});
+        return Object.keys(ranks)
+            .reduce((acc, k) => ranks[k] < ranks[acc] ? +k : acc, 0);
+    }
+    function initializeTooltips() {
+        $('.tooltipped').tooltip({ delay: 50 });
     }
     function gameOverCallback() {
         gamePanel.classList.add('hide');
         settingsPanel.classList.remove('hide');
+        if (startPractice) {
+            startPractice = false;
+            gameMode.value = '' + RoteMath.GameMode.Practice;
+            practiceNumber.value = '' + worstDigit;
+            startGame();
+        }
     }
     document.addEventListener('DOMContentLoaded', init);
 })(RoteMath || (RoteMath = {}));
