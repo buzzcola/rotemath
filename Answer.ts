@@ -14,8 +14,8 @@ namespace RoteMath {
         toString() {
             let message: string;
             if (this.success) message = '(Correct!)';
-            else if (!this.firstTry) message = '(Time Out)';
-            else message = '(First Answer was Incorrect)';
+            else if (!this.firstTry) message = '(First Answer was Incorrect)';
+            else message = '(Time Out)';
 
             return `${this.problem.toString()} ${message}`;
         }

@@ -49,7 +49,7 @@ namespace RoteMath {
 
         get score() {
             return this.answers
-                .filter(a => a.success && a.time <= this.ANSWER_MAX_MS)
+                .filter(a => a.success)
                 .length;
         }
 
@@ -92,7 +92,7 @@ namespace RoteMath {
 
             if (this.inState(GameState.GameOver, GameState.NotStarted, GameState.VictoryLap)) return;
             
-            let expired = (elapsed - this._currentProblemStartTime.getTime()) > this.ANSWER_MAX_MS;
+            let expired = elapsed > this.ANSWER_MAX_MS;
 
             let result: boolean;
             if (answer === this.currentProblem.answer) {
