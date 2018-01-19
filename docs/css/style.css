@@ -54,3 +54,16 @@ table.resultsGrid td.success {
 table.resultsGrid td.failure {
   background-color:rgb(190, 97, 97);
 }
+
+/* override inaccurate progress animation. */
+
+.progress .determinate {
+
+  -webkit-transition: none !important;
+  transition: none !important;
+
+/*
+-webkit-transition: width .1s linear;
+transition: width .1s linear;
+*/
+}

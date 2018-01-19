@@ -32,7 +32,7 @@ namespace RoteMath {
     let gameOverMessage: HTMLParagraphElement;
     let gameOverGridContainer: HTMLDivElement;
     let practiceSuggestion: HTMLDivElement;
-    let suggestionMessage:HTMLParagraphElement;
+    let suggestionMessage: HTMLParagraphElement;
     let practiceSuggestionButton: HTMLAnchorElement;
     let startPractice: boolean;
 
@@ -70,10 +70,8 @@ namespace RoteMath {
         $(gameMode).change(function (event) {
             let mode: GameMode = +gameMode.value;
             if (mode === GameMode.Competitive) {
-                competitionPanel.classList.remove('hide');
                 practicePanel.classList.add('hide');
             } else {
-                competitionPanel.classList.add('hide');
                 practicePanel.classList.remove('hide');
             }
         });
@@ -90,17 +88,18 @@ namespace RoteMath {
             complete: gameOverCallback
         });
     }
-
+    
     function startGame() {
         let mode: GameMode = +gameMode.value
         let type: ProblemType = +problemType.value;
-        let param = mode === GameMode.Competitive ? +gameMax.value : +practiceNumber.value;
-        game = new Game({ gameMode: mode, problemType: type, param: param });
+        let max = +gameMax.value;
+        let practiceDigit = +practiceNumber.value;
+        game = new Game({ gameMode: mode, problemType: type, max: max, practiceDigit: practiceDigit });
 
         if (progressInterval) {
             window.clearInterval(progressInterval);
         }
-        progressInterval = window.setInterval(updateTimeLeft, 250);
+        progressInterval = window.setInterval(updateTimeLeft, 100);
 
         // clear out the button div, then make a button for every possible answer.
         answerButtons = [];
@@ -161,15 +160,17 @@ namespace RoteMath {
     }
 
     function updateTimeLeft() {
-        let width = '' + (game.percentageTimeLeft * 100) + '%';
+        // report progress -5% to account for latency and whatever. Before this change
+        // a player would get a missed point when there appeared to be time left on the timer.
+        let width = '' + Math.max((Math.floor(game.percentageTimeLeft * 100) - 5), 0) + '%';
         progressBar.style.width = width;
     }
 
     function onGameOver() {
-        let message = `Game Over! You scored ${game.score} out of ${game.maxScore}. `;
+        let message = `Game Over. You scored ${game.score} out of ${game.maxScore}. `;
 
         if (game.score == game.maxScore) {
-            message += 'That\'s perfect! You did a great job.';
+            message += 'That\'s perfect!';
         } else {
             message += 'Keep on practicing!';
         }
@@ -178,7 +179,7 @@ namespace RoteMath {
         gameOverGridContainer.appendChild(makeResultTable(game.answers));
         initializeTooltips();
 
-        if (game.gameMode === GameMode.Competitive) {
+        if (game.gameMode === GameMode.Competitive && !game.answers.every(a => a.success)) {
             worstDigit = getWorstDigit(game.answers);
             let message = `You could use some more practice for the number ${worstDigit}.`;
             suggestionMessage.innerText = message;
@@ -240,7 +241,7 @@ namespace RoteMath {
         return table;
     }
 
-    function getWorstDigit(answers: Answer[]):number {
+    function getWorstDigit(answers: Answer[]): number {
         let correct = answers.filter(a => a.success);
         let ranks = correct.map(a => a.problem.left)
             .concat(correct.map(a => a.problem.right))
@@ -257,10 +258,10 @@ namespace RoteMath {
     function gameOverCallback() {
         gamePanel.classList.add('hide');
         settingsPanel.classList.remove('hide');
-        if(startPractice){
+        if (startPractice) {
             startPractice = false;
             gameMode.value = '' + GameMode.Practice;
-            practiceNumber.value = '' + worstDigit;        
+            practiceNumber.value = '' + worstDigit;
             startGame();
         }
     }

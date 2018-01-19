@@ -130,12 +130,12 @@ var RoteMath;
         static makeProblems(args) {
             let result = [];
             if (args.gameMode === RoteMath.GameMode.Competitive) {
-                return RoteMath.Utility.range2(args.param + 1)
+                return RoteMath.Utility.range2(args.max + 1)
                     .map(p => new Problem(args.problemType, p.x, p.y));
             }
             else {
-                return RoteMath.Utility.range(13)
-                    .map(x => new Problem(args.problemType, args.param, x));
+                return RoteMath.Utility.range(args.max + 1)
+                    .map(x => new Problem(args.problemType, args.practiceDigit, x));
             }
         }
         toString() {
@@ -187,8 +187,7 @@ var RoteMath;
             if (!this.inState(GameState.WaitingForFirstAnswer)) {
                 return 0;
             }
-            let elapsed = (new Date()).getTime() - this._currentProblemStartTime.getTime();
-            return Math.max(0, this.ANSWER_MAX_MS - elapsed);
+            return Math.max(0, this.ANSWER_MAX_MS - this.timeElapsed);
         }
         get percentageTimeLeft() {
             return this.timeLeft / this.ANSWER_MAX_MS;
@@ -348,11 +347,9 @@ var RoteMath;
         $(gameMode).change(function (event) {
             let mode = +gameMode.value;
             if (mode === RoteMath.GameMode.Competitive) {
-                competitionPanel.classList.remove('hide');
                 practicePanel.classList.add('hide');
             }
             else {
-                competitionPanel.classList.add('hide');
                 practicePanel.classList.remove('hide');
             }
         });
@@ -369,12 +366,13 @@ var RoteMath;
     function startGame() {
         let mode = +gameMode.value;
         let type = +problemType.value;
-        let param = mode === RoteMath.GameMode.Competitive ? +gameMax.value : +practiceNumber.value;
-        game = new RoteMath.Game({ gameMode: mode, problemType: type, param: param });
+        let max = +gameMax.value;
+        let practiceDigit = +practiceNumber.value;
+        game = new RoteMath.Game({ gameMode: mode, problemType: type, max: max, practiceDigit: practiceDigit });
         if (progressInterval) {
             window.clearInterval(progressInterval);
         }
-        progressInterval = window.setInterval(updateTimeLeft, 250);
+        progressInterval = window.setInterval(updateTimeLeft, 100);
         // clear out the button div, then make a button for every possible answer.
         answerButtons = [];
         while (buttonContainer.hasChildNodes()) {
@@ -426,13 +424,15 @@ var RoteMath;
         }
     }
     function updateTimeLeft() {
-        let width = '' + (game.percentageTimeLeft * 100) + '%';
+        // report progress -5% to account for latency and whatever. Before this change
+        // a player would get a missed point when there appeared to be time left on the timer.
+        let width = '' + Math.max((Math.floor(game.percentageTimeLeft * 100) - 5), 0) + '%';
         progressBar.style.width = width;
     }
     function onGameOver() {
-        let message = `Game Over! You scored ${game.score} out of ${game.maxScore}. `;
+        let message = `Game Over. You scored ${game.score} out of ${game.maxScore}. `;
         if (game.score == game.maxScore) {
-            message += 'That\'s perfect! You did a great job.';
+            message += 'That\'s perfect!';
         }
         else {
             message += 'Keep on practicing!';
@@ -440,7 +440,7 @@ var RoteMath;
         gameOverGridContainer.innerHTML = '';
         gameOverGridContainer.appendChild(makeResultTable(game.answers));
         initializeTooltips();
-        if (game.gameMode === RoteMath.GameMode.Competitive) {
+        if (game.gameMode === RoteMath.GameMode.Competitive && !game.answers.every(a => a.success)) {
             worstDigit = getWorstDigit(game.answers);
             let message = `You could use some more practice for the number ${worstDigit}.`;
             suggestionMessage.innerText = message;
