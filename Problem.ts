@@ -31,14 +31,14 @@ namespace RoteMath {
             }
         }
 
-        static makeProblems(args: { problemType: ProblemType, gameMode: GameMode, param: number }): Problem[] {
+        static makeProblems(args: { problemType: ProblemType, gameMode: GameMode, max: number, practiceDigit?: number }): Problem[] {
             let result = [];
             if (args.gameMode === GameMode.Competitive) {
-                return Utility.range2(args.param + 1)
+                return Utility.range2(args.max + 1)
                     .map(p => new Problem(args.problemType, p.x, p.y));
             } else {
-                return Utility.range(13)
-                    .map(x => new Problem(args.problemType, args.param, x));
+                return Utility.range(args.max + 1)
+                    .map(x => new Problem(args.problemType, args.practiceDigit, x));
             }
         }
 

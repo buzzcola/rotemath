@@ -28,10 +28,10 @@ namespace RoteMath {
         private _currentProblemStartTime: Date;
         public readonly allPossibleAnswers: ReadonlyArray<number>;
         public readonly answers: Answer[] = []; // the user's answers.
-        public readonly gameMode:GameMode;
+        public readonly gameMode: GameMode;
 
-        get timeElapsed() {            
-            return (new Date()).getTime() - this._currentProblemStartTime.getTime();            
+        get timeElapsed() {
+            return (new Date()).getTime() - this._currentProblemStartTime.getTime();
         }
 
         get timeLeft() {
@@ -39,8 +39,7 @@ namespace RoteMath {
                 return 0;
             }
 
-            let elapsed = (new Date()).getTime() - this._currentProblemStartTime.getTime();
-            return Math.max(0, this.ANSWER_MAX_MS - elapsed);
+            return Math.max(0, this.ANSWER_MAX_MS - this.timeElapsed);
         }
 
         get percentageTimeLeft() {
@@ -65,7 +64,7 @@ namespace RoteMath {
             return this._state;
         }
 
-        constructor(args: { problemType: ProblemType, gameMode: GameMode, param: number }) {
+        constructor(args: { problemType: ProblemType, gameMode: GameMode, max: number, practiceDigit?: number }) {
             let problems = Problem.makeProblems(args);
             this.answers = [];
             this.gameMode = args.gameMode;
@@ -88,22 +87,22 @@ namespace RoteMath {
         }
 
         tryAnswer(answer: number): boolean {
-            let elapsed = this.timeElapsed;            
+            let elapsed = this.timeElapsed;
 
             if (this.inState(GameState.GameOver, GameState.NotStarted, GameState.VictoryLap)) return;
-            
+
             let expired = elapsed > this.ANSWER_MAX_MS;
 
             let result: boolean;
             if (answer === this.currentProblem.answer) {
-                result = true;                
+                result = true;
                 let firstTry = this.inState(GameState.WaitingForFirstAnswer);
                 this.answers.push(new Answer(this.currentProblem, elapsed, firstTry, expired));
                 Event.fire(Events.ScoreChanged);
-                
-                this._state = GameState.VictoryLap;                
+
+                this._state = GameState.VictoryLap;
                 Event.fire(Events.CorrectAnswer);
-                
+
                 window.setTimeout(() => {
                     if (this._problemStack.length === 0) {
                         this.gameOver();
