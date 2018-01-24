@@ -1,9 +1,14 @@
+/// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+/// <reference path="Utility.ts" />
 /// <reference path="Game.ts" />
 
 namespace RoteMath {
 
     // shim for javascript to use materialize stuff.
     declare function $(selector: any): any;
+    //declare class webkitSpeechRecognition { grammars: webkitSpeechGrammarList };
+    //declare class webkitSpeechGrammarList { addFromString(string: string, weight: number): void };
+
     let $$: Function = document.querySelector.bind(document); // this is just less typing.
 
     let game: Game;
@@ -36,6 +41,8 @@ namespace RoteMath {
     let practiceSuggestionButton: HTMLAnchorElement;
     let startPractice: boolean;
 
+    let recognition: SpeechRecognition;
+
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
     const BTN_INCORRECT = 'red';
@@ -65,7 +72,7 @@ namespace RoteMath {
         practiceSuggestionButton = $$('#practiceSuggestionButton');
 
         // this will be a lot less tedious with some kind of SPA framework, I know.
-        // have to use jQuery for select change instead of addEventListener because
+        // have to use jQuery for select change instead of vanilla because
         // of materialize.
         $(gameMode).change(function (event) {
             let mode: GameMode = +gameMode.value;
@@ -87,8 +94,32 @@ namespace RoteMath {
         $('#gameOver').modal({
             complete: gameOverCallback
         });
+
+        let numberWords = Utility.range(145).map(n => '' + n).join(' | ');
+        let grammar = `#JSGF V1.0; grammar numbers; public <number> = ${numberWords};`
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;
+        var speechRecognitionList = new webkitSpeechGrammarList();
+        speechRecognitionList.addFromString(grammar, 1);
+        recognition.grammars = speechRecognitionList;
+        recognition.onresult = function (event) {
+            
+            let answer = event.results[0][0].transcript;
+            var answerNumber = +answer;
+            console.log(`got audio input: ${answer}`);
+
+            if (!isNaN(answerNumber)) {
+                if (!game.tryAnswer(answerNumber)) {
+                    console.log(`  > ${answerNumber} is incorrect!`);
+                    window.setTimeout(() => recognition.start(), 100);
+                }
+            } else {
+                console.log(`  > that's not a number!`);
+                window.setTimeout(() => recognition.start(), 100);
+            }
+        }
     }
-    
+
     function startGame() {
         let mode: GameMode = +gameMode.value
         let type: ProblemType = +problemType.value;
@@ -157,6 +188,9 @@ namespace RoteMath {
                 b.classList.remove(BTN_ACTIVE);
             }
         }
+
+        // listen for the answer!
+        recognition.start();
     }
 
     function updateTimeLeft() {

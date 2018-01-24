@@ -285,10 +285,16 @@ var RoteMath;
     }
     RoteMath.Game = Game;
 })(RoteMath || (RoteMath = {}));
+/// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+/// <reference path="Utility.ts" />
 /// <reference path="Game.ts" />
 var RoteMath;
+/// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+/// <reference path="Utility.ts" />
 /// <reference path="Game.ts" />
 (function (RoteMath) {
+    //declare class webkitSpeechRecognition { grammars: webkitSpeechGrammarList };
+    //declare class webkitSpeechGrammarList { addFromString(string: string, weight: number): void };
     let $$ = document.querySelector.bind(document); // this is just less typing.
     let game;
     let worstDigit;
@@ -316,6 +322,7 @@ var RoteMath;
     let suggestionMessage;
     let practiceSuggestionButton;
     let startPractice;
+    let recognition;
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
     const BTN_INCORRECT = 'red';
@@ -342,7 +349,7 @@ var RoteMath;
         suggestionMessage = $$('#suggestionMessage');
         practiceSuggestionButton = $$('#practiceSuggestionButton');
         // this will be a lot less tedious with some kind of SPA framework, I know.
-        // have to use jQuery for select change instead of addEventListener because
+        // have to use jQuery for select change instead of vanilla because
         // of materialize.
         $(gameMode).change(function (event) {
             let mode = +gameMode.value;
@@ -362,6 +369,28 @@ var RoteMath;
         $('#gameOver').modal({
             complete: gameOverCallback
         });
+        let numberWords = RoteMath.Utility.range(145).map(n => '' + n).join(' | ');
+        let grammar = `#JSGF V1.0; grammar numbers; public <number> = ${numberWords};`;
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;
+        var speechRecognitionList = new webkitSpeechGrammarList();
+        speechRecognitionList.addFromString(grammar, 1);
+        recognition.grammars = speechRecognitionList;
+        recognition.onresult = function (event) {
+            let answer = event.results[0][0].transcript;
+            var answerNumber = +answer;
+            console.log(`got audio input: ${answer}`);
+            if (!isNaN(answerNumber)) {
+                if (!game.tryAnswer(answerNumber)) {
+                    console.log(`  > ${answerNumber} is incorrect!`);
+                    window.setTimeout(() => recognition.start(), 100);
+                }
+            }
+            else {
+                console.log(`  > that's not a number!`);
+                window.setTimeout(() => recognition.start(), 100);
+            }
+        };
     }
     function startGame() {
         let mode = +gameMode.value;
@@ -422,6 +451,8 @@ var RoteMath;
                 b.classList.remove(BTN_ACTIVE);
             }
         }
+        // listen for the answer!
+        recognition.start();
     }
     function updateTimeLeft() {
         // report progress -5% to account for latency and whatever. Before this change
