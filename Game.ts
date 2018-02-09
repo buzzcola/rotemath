@@ -18,7 +18,7 @@ namespace RoteMath {
 
     export class Game {
 
-        private readonly ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
+        private readonly ANSWER_MAX_MS = 5000; // time the player can correctly answer and still get a point.
         private readonly ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
 
         private _state: GameState = GameState.NotStarted; // state of the game.        

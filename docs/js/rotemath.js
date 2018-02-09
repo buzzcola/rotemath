@@ -165,7 +165,7 @@ var RoteMath;
     })(GameState = RoteMath.GameState || (RoteMath.GameState = {}));
     class Game {
         constructor(args) {
-            this.ANSWER_MAX_MS = 3000; // time the player can correctly answer and still get a point.
+            this.ANSWER_MAX_MS = 5000; // time the player can correctly answer and still get a point.
             this.ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
             this._state = GameState.NotStarted; // state of the game.        
             this.answers = []; // the user's answers.
@@ -285,16 +285,100 @@ var RoteMath;
     }
     RoteMath.Game = Game;
 })(RoteMath || (RoteMath = {}));
+/// <reference path="./node_modules/@types/modernizr/index.d.ts" />
 /// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+var RoteMath;
+/// <reference path="./node_modules/@types/modernizr/index.d.ts" />
+/// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+(function (RoteMath) {
+    function makeSpeechRecognition() {
+        let Recognition;
+        let GrammarList;
+        if (typeof (SpeechRecognition) === 'undefined') {
+            Recognition = webkitSpeechRecognition;
+            GrammarList = webkitSpeechGrammarList;
+        }
+        else {
+            Recognition = SpeechRecognition;
+            GrammarList = SpeechGrammarList;
+        }
+        let numberWords = RoteMath.Utility.range(145).map(n => '' + n).join(' | ');
+        let grammar = `#JSGF V1.0; grammar numbers; public <number> = ${numberWords};`;
+        let recognition = new Recognition();
+        recognition.continuous = false;
+        var speechRecognitionList = new GrammarList();
+        speechRecognitionList.addFromString(grammar, 1);
+        recognition.grammars = speechRecognitionList;
+        recognition.maxAlternatives = 5;
+        return recognition;
+    }
+    RoteMath.makeSpeechRecognition = makeSpeechRecognition;
+    function getAnswerFromSpeechResults(resultList) {
+        // this is annoying. why are some things implemented as array-like instead of arrays?
+        let results = [];
+        for (let i = 0; i < resultList[0].length; i++) {
+            results.push(resultList[0][i].transcript);
+        }
+        let numberResults = results.map(pluckNumberFromPhrase).filter(x => x !== undefined);
+        let gotNumber = !!numberResults.length;
+        let number = gotNumber ? numberResults[0] : undefined;
+        let word = results[0];
+        let result = {
+            gotNumber: gotNumber,
+            number: number,
+            word: word,
+            alternatives: results
+        };
+        console.log(result);
+        return result;
+    }
+    RoteMath.getAnswerFromSpeechResults = getAnswerFromSpeechResults;
+    function pluckNumberFromPhrase(phrase) {
+        let numbers = phrase.split(' ').filter(x => !isNaN(+x)).map(x => +x);
+        return numbers.length ? numbers[0] : undefined;
+    }
+    function speak(enabled, message, callback) {
+        if (!enabled)
+            return;
+        let synth = speechSynthesis;
+        let utterance = new SpeechSynthesisUtterance(message);
+        synth.speak(utterance);
+        if (typeof (callback) === 'function') {
+            utterance.onend = () => callback();
+        }
+    }
+    RoteMath.speak = speak;
+    function speakProblem(enabled, problem, callback) {
+        let operator;
+        if (problem.type == RoteMath.ProblemType.Addition) {
+            operator = 'plus';
+        }
+        else {
+            operator = 'times';
+        }
+        let message = `${problem.left} ${operator} ${problem.right}`;
+        speak(enabled, message, callback);
+    }
+    RoteMath.speakProblem = speakProblem;
+    function supportsSpeechRecognition() {
+        return Modernizr.speechrecognition;
+    }
+    RoteMath.supportsSpeechRecognition = supportsSpeechRecognition;
+    function supportsSpeechSynthesis() {
+        return Modernizr.speechsynthesis;
+    }
+    RoteMath.supportsSpeechSynthesis = supportsSpeechSynthesis;
+})(RoteMath || (RoteMath = {}));
+/// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+/// <reference path="SpeechRecognition.ts" />
 /// <reference path="Utility.ts" />
 /// <reference path="Game.ts" />
 var RoteMath;
 /// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+/// <reference path="SpeechRecognition.ts" />
 /// <reference path="Utility.ts" />
 /// <reference path="Game.ts" />
 (function (RoteMath) {
-    //declare class webkitSpeechRecognition { grammars: webkitSpeechGrammarList };
-    //declare class webkitSpeechGrammarList { addFromString(string: string, weight: number): void };
     let $$ = document.querySelector.bind(document); // this is just less typing.
     let game;
     let worstDigit;
@@ -302,6 +386,10 @@ var RoteMath;
     let start;
     let problemType;
     let gameMode;
+    let speechEnabledContainer;
+    let speechEnabledCheckbox;
+    let micEnabledContainer;
+    let micEnabledCheckbox;
     let practicePanel;
     let competitionPanel;
     let practiceNumber;
@@ -323,6 +411,8 @@ var RoteMath;
     let practiceSuggestionButton;
     let startPractice;
     let recognition;
+    let speechEnabled;
+    let micEnabled;
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
     const BTN_INCORRECT = 'red';
@@ -332,6 +422,10 @@ var RoteMath;
         start = $$('#start');
         problemType = $$('#problemType');
         gameMode = $$('#gameMode');
+        speechEnabledContainer = $$('#speechEnabledContainer');
+        speechEnabledCheckbox = $$('#speechEnabledCheckbox');
+        micEnabledContainer = $$('#micEnabledContainer');
+        micEnabledCheckbox = $$('#micEnabledCheckbox');
         practicePanel = $$('#practicePanel');
         competitionPanel = $$('#competitionPanel');
         practiceNumber = $$('#practiceNumber');
@@ -369,28 +463,15 @@ var RoteMath;
         $('#gameOver').modal({
             complete: gameOverCallback
         });
-        let numberWords = RoteMath.Utility.range(145).map(n => '' + n).join(' | ');
-        let grammar = `#JSGF V1.0; grammar numbers; public <number> = ${numberWords};`;
-        recognition = new webkitSpeechRecognition();
-        recognition.continuous = false;
-        var speechRecognitionList = new webkitSpeechGrammarList();
-        speechRecognitionList.addFromString(grammar, 1);
-        recognition.grammars = speechRecognitionList;
-        recognition.onresult = function (event) {
-            let answer = event.results[0][0].transcript;
-            var answerNumber = +answer;
-            console.log(`got audio input: ${answer}`);
-            if (!isNaN(answerNumber)) {
-                if (!game.tryAnswer(answerNumber)) {
-                    console.log(`  > ${answerNumber} is incorrect!`);
-                    window.setTimeout(() => recognition.start(), 100);
-                }
-            }
-            else {
-                console.log(`  > that's not a number!`);
-                window.setTimeout(() => recognition.start(), 100);
-            }
-        };
+        let apology = 'Sorry, this doesn\'t work with your web browser.';
+        if (!RoteMath.supportsSpeechRecognition()) {
+            micEnabledCheckbox.disabled = true;
+            micEnabledContainer.addEventListener('click', () => showToast(apology));
+        }
+        if (!RoteMath.supportsSpeechSynthesis()) {
+            speechEnabledCheckbox.disabled = true;
+            speechEnabledCheckbox.addEventListener('click', () => showToast(apology));
+        }
     }
     function startGame() {
         let mode = +gameMode.value;
@@ -420,6 +501,16 @@ var RoteMath;
         });
         settingsPanel.classList.add('hide');
         gamePanel.classList.remove('hide');
+        if (micEnabledCheckbox.checked) {
+            recognition = RoteMath.makeSpeechRecognition();
+            recognition.onresult = onNumberSpeechRecognized;
+        }
+        else if (recognition !== undefined) {
+            recognition.onresult = undefined;
+            recognition.stop();
+            recognition = undefined;
+        }
+        speechEnabled = speechEnabledCheckbox.checked;
         game.start();
     }
     function onAnswerButtonClick() {
@@ -430,8 +521,24 @@ var RoteMath;
             this.classList.add('red');
         }
     }
+    function onNumberSpeechRecognized(event) {
+        let result = RoteMath.getAnswerFromSpeechResults(event.results);
+        if (result.gotNumber) {
+            if (!game.tryAnswer(result.number)) {
+                let message = `${result.number} is incorrect!`;
+                showToast(message);
+                RoteMath.speak(speechEnabled, message, () => recognition.start());
+            }
+        }
+        else {
+            let alternatives = result.alternatives.map(s => s + '?!').join('<br>');
+            showToast(alternatives);
+            RoteMath.speak(speechEnabled, 'I didn\'t get that.', () => recognition.start());
+        }
+    }
     function onCorrectAnswer() {
         problem.innerHTML += ' = ' + game.currentProblem.answer;
+        RoteMath.speak(speechEnabled, 'correct!');
     }
     function onScoreChanged() {
         score.innerHTML = '' + game.score;
@@ -451,8 +558,9 @@ var RoteMath;
                 b.classList.remove(BTN_ACTIVE);
             }
         }
-        // listen for the answer!
-        recognition.start();
+        if (speechEnabledCheckbox.checked) {
+            RoteMath.speakProblem(speechEnabled, game.currentProblem, () => recognition.start());
+        }
     }
     function updateTimeLeft() {
         // report progress -5% to account for latency and whatever. Before this change
@@ -533,6 +641,9 @@ var RoteMath;
     }
     function initializeTooltips() {
         $('.tooltipped').tooltip({ delay: 50 });
+    }
+    function showToast(message) {
+        Materialize.toast(message, 2000, 'rounded');
     }
     function gameOverCallback() {
         gamePanel.classList.add('hide');

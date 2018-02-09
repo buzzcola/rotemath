@@ -1,4 +1,5 @@
 /// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+/// <reference path="SpeechRecognition.ts" />
 /// <reference path="Utility.ts" />
 /// <reference path="Game.ts" />
 
@@ -6,8 +7,6 @@ namespace RoteMath {
 
     // shim for javascript to use materialize stuff.
     declare function $(selector: any): any;
-    //declare class webkitSpeechRecognition { grammars: webkitSpeechGrammarList };
-    //declare class webkitSpeechGrammarList { addFromString(string: string, weight: number): void };
 
     let $$: Function = document.querySelector.bind(document); // this is just less typing.
 
@@ -18,6 +17,10 @@ namespace RoteMath {
     let start: HTMLButtonElement;
     let problemType: HTMLSelectElement;
     let gameMode: HTMLSelectElement;
+    let speechEnabledContainer: HTMLDivElement;
+    let speechEnabledCheckbox: HTMLInputElement;
+    let micEnabledContainer: HTMLDivElement;
+    let micEnabledCheckbox: HTMLInputElement;
     let practicePanel: HTMLDivElement;
     let competitionPanel: HTMLDivElement;
     let practiceNumber: HTMLSelectElement;
@@ -42,6 +45,8 @@ namespace RoteMath {
     let startPractice: boolean;
 
     let recognition: SpeechRecognition;
+    let speechEnabled: boolean;
+    let micEnabled: boolean;
 
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
@@ -54,6 +59,10 @@ namespace RoteMath {
         start = $$('#start');
         problemType = $$('#problemType');
         gameMode = $$('#gameMode');
+        speechEnabledContainer = $$('#speechEnabledContainer');
+        speechEnabledCheckbox = $$('#speechEnabledCheckbox');
+        micEnabledContainer = $$('#micEnabledContainer');
+        micEnabledCheckbox = $$('#micEnabledCheckbox');
         practicePanel = $$('#practicePanel');
         competitionPanel = $$('#competitionPanel');
         practiceNumber = $$('#practiceNumber');
@@ -95,28 +104,15 @@ namespace RoteMath {
             complete: gameOverCallback
         });
 
-        let numberWords = Utility.range(145).map(n => '' + n).join(' | ');
-        let grammar = `#JSGF V1.0; grammar numbers; public <number> = ${numberWords};`
-        recognition = new webkitSpeechRecognition();
-        recognition.continuous = false;
-        var speechRecognitionList = new webkitSpeechGrammarList();
-        speechRecognitionList.addFromString(grammar, 1);
-        recognition.grammars = speechRecognitionList;
-        recognition.onresult = function (event) {
-            
-            let answer = event.results[0][0].transcript;
-            var answerNumber = +answer;
-            console.log(`got audio input: ${answer}`);
+        let apology = 'Sorry, this doesn\'t work with your web browser.';
+        if (!supportsSpeechRecognition()) {
+            micEnabledCheckbox.disabled = true;
+            micEnabledContainer.addEventListener('click', () => showToast(apology));
+        }
 
-            if (!isNaN(answerNumber)) {
-                if (!game.tryAnswer(answerNumber)) {
-                    console.log(`  > ${answerNumber} is incorrect!`);
-                    window.setTimeout(() => recognition.start(), 100);
-                }
-            } else {
-                console.log(`  > that's not a number!`);
-                window.setTimeout(() => recognition.start(), 100);
-            }
+        if (!supportsSpeechSynthesis()) {
+            speechEnabledCheckbox.disabled = true;
+            speechEnabledCheckbox.addEventListener('click', () => showToast(apology));
         }
     }
 
@@ -153,6 +149,17 @@ namespace RoteMath {
         settingsPanel.classList.add('hide');
         gamePanel.classList.remove('hide');
 
+        if (micEnabledCheckbox.checked) {
+            recognition = makeSpeechRecognition();
+            recognition.onresult = onNumberSpeechRecognized;
+        } else if (recognition !== undefined) {
+            recognition.onresult = undefined;
+            recognition.stop();
+            recognition = undefined;
+        }
+
+        speechEnabled = speechEnabledCheckbox.checked;
+
         game.start();
     }
 
@@ -165,8 +172,25 @@ namespace RoteMath {
         }
     }
 
+    function onNumberSpeechRecognized(event: { results: SpeechRecognitionResultList }) {
+        let result = getAnswerFromSpeechResults(event.results);
+
+        if (result.gotNumber) {
+            if (!game.tryAnswer(result.number)) {
+                let message = `${result.number} is incorrect!`;
+                showToast(message);
+                speak(speechEnabled, message, () => recognition.start());
+            }
+        } else {
+            let alternatives = result.alternatives.map(s => s + '?!').join('<br>');
+            showToast(alternatives);
+            speak(speechEnabled, 'I didn\'t get that.', () => recognition.start());
+        }
+    }
+
     function onCorrectAnswer() {
         problem.innerHTML += ' = ' + game.currentProblem.answer;
+        speak(speechEnabled, 'correct!');
     }
 
     function onScoreChanged() {
@@ -189,8 +213,9 @@ namespace RoteMath {
             }
         }
 
-        // listen for the answer!
-        recognition.start();
+        if (speechEnabledCheckbox.checked) {
+            speakProblem(speechEnabled, game.currentProblem, () => recognition.start());
+        }
     }
 
     function updateTimeLeft() {
@@ -287,6 +312,10 @@ namespace RoteMath {
 
     function initializeTooltips() {
         $('.tooltipped').tooltip({ delay: 50 });
+    }
+
+    function showToast(message: string) {
+        Materialize.toast(message, 2000, 'rounded');
     }
 
     function gameOverCallback() {
