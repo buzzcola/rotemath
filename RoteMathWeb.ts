@@ -1,9 +1,13 @@
+/// <reference path="./node_modules/@types/webspeechapi/index.d.ts" />
+/// <reference path="SpeechRecognition.ts" />
+/// <reference path="Utility.ts" />
 /// <reference path="Game.ts" />
 
 namespace RoteMath {
 
     // shim for javascript to use materialize stuff.
     declare function $(selector: any): any;
+
     let $$: Function = document.querySelector.bind(document); // this is just less typing.
 
     let game: Game;
@@ -13,6 +17,10 @@ namespace RoteMath {
     let start: HTMLButtonElement;
     let problemType: HTMLSelectElement;
     let gameMode: HTMLSelectElement;
+    let speechEnabledContainer: HTMLDivElement;
+    let speechEnabledCheckbox: HTMLInputElement;
+    let micEnabledContainer: HTMLDivElement;
+    let micEnabledCheckbox: HTMLInputElement;
     let practicePanel: HTMLDivElement;
     let competitionPanel: HTMLDivElement;
     let practiceNumber: HTMLSelectElement;
@@ -36,6 +44,10 @@ namespace RoteMath {
     let practiceSuggestionButton: HTMLAnchorElement;
     let startPractice: boolean;
 
+    let recognition: SpeechRecognition;
+    let speechEnabled: boolean;
+    let micEnabled: boolean;
+
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
     const BTN_INCORRECT = 'red';
@@ -47,6 +59,10 @@ namespace RoteMath {
         start = $$('#start');
         problemType = $$('#problemType');
         gameMode = $$('#gameMode');
+        speechEnabledContainer = $$('#speechEnabledContainer');
+        speechEnabledCheckbox = $$('#speechEnabledCheckbox');
+        micEnabledContainer = $$('#micEnabledContainer');
+        micEnabledCheckbox = $$('#micEnabledCheckbox');
         practicePanel = $$('#practicePanel');
         competitionPanel = $$('#competitionPanel');
         practiceNumber = $$('#practiceNumber');
@@ -65,7 +81,7 @@ namespace RoteMath {
         practiceSuggestionButton = $$('#practiceSuggestionButton');
 
         // this will be a lot less tedious with some kind of SPA framework, I know.
-        // have to use jQuery for select change instead of addEventListener because
+        // have to use jQuery for select change instead of vanilla because
         // of materialize.
         $(gameMode).change(function (event) {
             let mode: GameMode = +gameMode.value;
@@ -87,8 +103,19 @@ namespace RoteMath {
         $('#gameOver').modal({
             complete: gameOverCallback
         });
+
+        let apology = 'Sorry, this doesn\'t work with your web browser.';
+        if (!supportsSpeechRecognition()) {
+            micEnabledCheckbox.disabled = true;
+            micEnabledContainer.addEventListener('click', () => showToast(apology));
+        }
+
+        if (!supportsSpeechSynthesis()) {
+            speechEnabledCheckbox.disabled = true;
+            speechEnabledCheckbox.addEventListener('click', () => showToast(apology));
+        }
     }
-    
+
     function startGame() {
         let mode: GameMode = +gameMode.value
         let type: ProblemType = +problemType.value;
@@ -122,6 +149,17 @@ namespace RoteMath {
         settingsPanel.classList.add('hide');
         gamePanel.classList.remove('hide');
 
+        if (micEnabledCheckbox.checked) {
+            recognition = makeSpeechRecognition();
+            recognition.onresult = onNumberSpeechRecognized;
+        } else if (recognition !== undefined) {
+            recognition.onresult = undefined;
+            recognition.stop();
+            recognition = undefined;
+        }
+
+        speechEnabled = speechEnabledCheckbox.checked;
+
         game.start();
     }
 
@@ -134,8 +172,25 @@ namespace RoteMath {
         }
     }
 
+    function onNumberSpeechRecognized(event: { results: SpeechRecognitionResultList }) {
+        let result = getAnswerFromSpeechResults(event.results);
+
+        if (result.gotNumber) {
+            if (!game.tryAnswer(result.number)) {
+                let message = `${result.number} is incorrect!`;
+                showToast(message);
+                speak(speechEnabled, message, () => recognition.start());
+            }
+        } else {
+            let alternatives = result.alternatives.map(s => s + '?!').join('<br>');
+            showToast(alternatives);
+            speak(speechEnabled, 'I didn\'t get that.', () => recognition.start());
+        }
+    }
+
     function onCorrectAnswer() {
         problem.innerHTML += ' = ' + game.currentProblem.answer;
+        speak(speechEnabled, 'correct!');
     }
 
     function onScoreChanged() {
@@ -156,6 +211,10 @@ namespace RoteMath {
                 b.classList.add(BTN_INACTIVE);
                 b.classList.remove(BTN_ACTIVE);
             }
+        }
+
+        if (speechEnabledCheckbox.checked) {
+            speakProblem(speechEnabled, game.currentProblem, () => recognition.start());
         }
     }
 
@@ -253,6 +312,10 @@ namespace RoteMath {
 
     function initializeTooltips() {
         $('.tooltipped').tooltip({ delay: 50 });
+    }
+
+    function showToast(message: string) {
+        Materialize.toast(message, 2000, 'rounded');
     }
 
     function gameOverCallback() {
