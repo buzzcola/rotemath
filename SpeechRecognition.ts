@@ -55,13 +55,15 @@ namespace RoteMath {
     }
 
     export function speak(enabled: Boolean, message: string, callback?: () => any) {
-        if(!enabled) return;
-
-        let synth = speechSynthesis;
-        let utterance = new SpeechSynthesisUtterance(message);
-        synth.speak(utterance);
-        if (typeof (callback) === 'function') {
-            utterance.onend = () => callback();
+        if (enabled) {
+            let synth = speechSynthesis;
+            let utterance = new SpeechSynthesisUtterance(message);
+            synth.speak(utterance);
+            if (typeof (callback) === 'function') {
+                utterance.onend = () => callback();
+            }
+        } else {
+            callback();
         }
     }
 

@@ -338,13 +338,16 @@ var RoteMath;
         return numbers.length ? numbers[0] : undefined;
     }
     function speak(enabled, message, callback) {
-        if (!enabled)
-            return;
-        let synth = speechSynthesis;
-        let utterance = new SpeechSynthesisUtterance(message);
-        synth.speak(utterance);
-        if (typeof (callback) === 'function') {
-            utterance.onend = () => callback();
+        if (enabled) {
+            let synth = speechSynthesis;
+            let utterance = new SpeechSynthesisUtterance(message);
+            synth.speak(utterance);
+            if (typeof (callback) === 'function') {
+                utterance.onend = () => callback();
+            }
+        }
+        else {
+            callback();
         }
     }
     RoteMath.speak = speak;
@@ -527,13 +530,19 @@ var RoteMath;
             if (!game.tryAnswer(result.number)) {
                 let message = `${result.number} is incorrect!`;
                 showToast(message);
-                RoteMath.speak(speechEnabled, message, () => recognition.start());
+                RoteMath.speak(speechEnabled, message, function () {
+                    if (micEnabled)
+                        recognition.start();
+                });
             }
         }
         else {
             let alternatives = result.alternatives.map(s => s + '?!').join('<br>');
             showToast(alternatives);
-            RoteMath.speak(speechEnabled, 'I didn\'t get that.', () => recognition.start());
+            RoteMath.speak(speechEnabled, 'I didn\'t get that.', function () {
+                if (micEnabled)
+                    recognition.start();
+            });
         }
     }
     function onCorrectAnswer() {
@@ -558,9 +567,10 @@ var RoteMath;
                 b.classList.remove(BTN_ACTIVE);
             }
         }
-        if (speechEnabledCheckbox.checked) {
-            RoteMath.speakProblem(speechEnabled, game.currentProblem, () => recognition.start());
-        }
+        RoteMath.speakProblem(speechEnabled, game.currentProblem, function () {
+            if (micEnabled)
+                recognition.start();
+        });
     }
     function updateTimeLeft() {
         // report progress -5% to account for latency and whatever. Before this change

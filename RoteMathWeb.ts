@@ -179,12 +179,16 @@ namespace RoteMath {
             if (!game.tryAnswer(result.number)) {
                 let message = `${result.number} is incorrect!`;
                 showToast(message);
-                speak(speechEnabled, message, () => recognition.start());
+                speak(speechEnabled, message, function() {
+                    if (micEnabled) recognition.start();
+                });
             }
         } else {
             let alternatives = result.alternatives.map(s => s + '?!').join('<br>');
             showToast(alternatives);
-            speak(speechEnabled, 'I didn\'t get that.', () => recognition.start());
+            speak(speechEnabled, 'I didn\'t get that.', function() {
+                if (micEnabled) recognition.start();
+            });
         }
     }
 
@@ -213,9 +217,9 @@ namespace RoteMath {
             }
         }
 
-        if (speechEnabledCheckbox.checked) {
-            speakProblem(speechEnabled, game.currentProblem, () => recognition.start());
-        }
+        speakProblem(speechEnabled, game.currentProblem, function() {
+            if (micEnabled) recognition.start()
+        });
     }
 
     function updateTimeLeft() {
