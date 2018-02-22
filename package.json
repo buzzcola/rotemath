@@ -1,0 +1,32 @@
+{
+  "name": "rotemath",
+  "version": "1.0.0",
+  "description": "Learn math the hard way!",
+  "main": "docs/js/rotemath.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jquery": "^3.3.0",
+    "@types/modernizr": "^3.5.1",
+    "@types/webspeechapi": "0.0.29"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buzzcola/rotemath.git"
+  },
+  "keywords": [
+    "math",
+    "educational"
+  ],
+  "author": "James Orr",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/buzzcola/rotemath/issues"
+  },
+  "homepage": "https://github.com/buzzcola/rotemath#readme"
+}
