@@ -18,6 +18,17 @@
   padding:0; /* fixes centering issues. */
 }
 
+@keyframes glowing {
+  0% { box-shadow: 0 0 -10px #c4a300; }
+  40% { box-shadow: 0 0 20px #c4a300; }
+  60% { box-shadow: 0 0 20px #c4a300; }
+  100% { box-shadow: 0 0 -10px #c4a300; }
+}
+
+#solutionMask {
+  animation: glowing 2000ms infinite;
+}
+
 /* results table grid */
 
 table.resultsGrid {

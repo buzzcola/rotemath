@@ -44,9 +44,7 @@ namespace RoteMath {
     let practiceSuggestionButton: HTMLAnchorElement;
     let startPractice: boolean;
 
-    let recognition: SpeechRecognition;
-    let speechEnabled: boolean;
-    let micEnabled: boolean;
+    let speech: RoteSpeech;
 
     const BTN_INACTIVE = 'grey';
     const BTN_ACTIVE = 'blue';
@@ -105,12 +103,12 @@ namespace RoteMath {
         });
 
         let apology = 'Sorry, this doesn\'t work with your web browser.';
-        if (!supportsSpeechRecognition()) {
+        if (!RoteSpeech.supportsSpeechRecognition()) {
             micEnabledCheckbox.disabled = true;
             micEnabledContainer.addEventListener('click', () => showToast(apology));
         }
 
-        if (!supportsSpeechSynthesis()) {
+        if (!RoteSpeech.supportsSpeechSynthesis()) {
             speechEnabledCheckbox.disabled = true;
             speechEnabledCheckbox.addEventListener('click', () => showToast(apology));
         }
@@ -134,7 +132,7 @@ namespace RoteMath {
             buttonContainer.removeChild(buttonContainer.lastChild);
         }
 
-        game.allPossibleAnswers
+        game.allPossibleSolutions
             .forEach(i => {
                 let button = document.createElement('a');
                 for (let c of ['btn', BTN_INACTIVE, 'answer-button']) {
@@ -149,23 +147,18 @@ namespace RoteMath {
         settingsPanel.classList.add('hide');
         gamePanel.classList.remove('hide');
 
-        if (micEnabledCheckbox.checked) {
-            recognition = makeSpeechRecognition();
-            recognition.onresult = onNumberSpeechRecognized;
-        } else if (recognition !== undefined) {
-            recognition.onresult = undefined;
-            recognition.stop();
-            recognition = undefined;
-        }
+        speech = new RoteSpeech(speechEnabledCheckbox.checked, micEnabledCheckbox.checked);
 
-        speechEnabled = speechEnabledCheckbox.checked;
+        if (speech.synthesisEnabled) {
+            speech.speechRecognition.onresult = onNumberSpeechRecognized;
+        }
 
         game.start();
     }
 
     function onAnswerButtonClick() {
-        let answer = +this.innerText;
-        let result = game.tryAnswer(answer);
+        let solution = +this.innerText;
+        let result = game.trySolution(solution);
         if (!result) {
             this.classList.remove('blue');
             this.classList.add('red');
@@ -173,28 +166,24 @@ namespace RoteMath {
     }
 
     function onNumberSpeechRecognized(event: { results: SpeechRecognitionResultList }) {
-        let result = getAnswerFromSpeechResults(event.results);
+        let result = RoteSpeech.getAnswerFromSpeechResults(event.results);
 
         if (result.gotNumber) {
-            if (!game.tryAnswer(result.number)) {
+            if (!game.trySolution(result.number)) {
                 let message = `${result.number} is incorrect!`;
                 showToast(message);
-                speak(speechEnabled, message, function() {
-                    if (micEnabled) recognition.start();
-                });
+                speech.speak(message, true);
             }
         } else {
             let alternatives = result.alternatives.map(s => s + '?!').join('<br>');
             showToast(alternatives);
-            speak(speechEnabled, 'I didn\'t get that.', function() {
-                if (micEnabled) recognition.start();
-            });
+            speech.speak('I didn\'t get that.', true);
         }
     }
 
     function onCorrectAnswer() {
-        problem.innerHTML += ' = ' + game.currentProblem.answer;
-        speak(speechEnabled, 'correct!');
+        problem.innerHTML = game.currentProblem.questionUnmasked;
+        speech.speak('correct!');
     }
 
     function onScoreChanged() {
@@ -202,10 +191,12 @@ namespace RoteMath {
     }
 
     function onProblemLoaded() {
-        problem.innerHTML = game.currentProblem.question;
+        let problemContent = game.currentProblem.questionMasked;
+        problemContent = problemContent.replace(Problem.maskCharacter, `<span id="solutionMask">${Problem.maskCharacter}</span>`);
+        problem.innerHTML = problemContent;
 
         // highlight suggested answers.
-        var suggestions = game.getSuggestedAnswers();
+        var suggestions = game.getSuggestedSolutions();
         for (let b of answerButtons) {
             b.classList.remove(BTN_INCORRECT);
             if (suggestions.indexOf(+b.innerHTML) !== -1) {
@@ -217,9 +208,7 @@ namespace RoteMath {
             }
         }
 
-        speakProblem(speechEnabled, game.currentProblem, function() {
-            if (micEnabled) recognition.start()
-        });
+        speech.speakProblem(game.currentProblem, true);
     }
 
     function updateTimeLeft() {

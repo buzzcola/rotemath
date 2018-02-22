@@ -26,7 +26,7 @@ namespace RoteMath {
         private _maxScore: number; // maximum possible score.
         private _currentProblem: Problem; // the current problem, if the game is in play.        
         private _currentProblemStartTime: Date;
-        public readonly allPossibleAnswers: ReadonlyArray<number>;
+        public readonly allPossibleSolutions: ReadonlyArray<number>;
         public readonly answers: Answer[] = []; // the user's answers.
         public readonly gameMode: GameMode;
 
@@ -69,8 +69,8 @@ namespace RoteMath {
             this.answers = [];
             this.gameMode = args.gameMode;
             this._maxScore = problems.length;
-            this.allPossibleAnswers = problems
-                .map(p => p.answer) // grab all answers
+            this.allPossibleSolutions = problems
+                .map(p => p.solution) // grab all answers
                 .filter((value, index, self) => self.indexOf(value) === index) // get distinct
                 .sort((a, b) => a - b); // sort
 
@@ -86,7 +86,7 @@ namespace RoteMath {
             }
         }
 
-        tryAnswer(answer: number): boolean {
+        trySolution(solution: number): boolean {
             let elapsed = this.timeElapsed;
 
             if (this.inState(GameState.GameOver, GameState.NotStarted, GameState.VictoryLap)) return;
@@ -94,7 +94,7 @@ namespace RoteMath {
             let expired = elapsed > this.ANSWER_MAX_MS;
 
             let result: boolean;
-            if (answer === this.currentProblem.answer) {
+            if (solution === this.currentProblem.solution) {
                 result = true;
                 let firstTry = this.inState(GameState.WaitingForFirstAnswer);
                 this.answers.push(new Answer(this.currentProblem, elapsed, firstTry, expired));
@@ -118,15 +118,15 @@ namespace RoteMath {
             return result;
         }
 
-        getSuggestedAnswers() {
-            // get a range of possible answers to serve as a hint for the user.
+        getSuggestedSolutions() {
+            // get a range of possible solutions to serve as a hint for the user.
 
-            let answerIndex = this.allPossibleAnswers.indexOf(this._currentProblem.answer);
+            let solutionIndex = this.allPossibleSolutions.indexOf(this._currentProblem.solution);
             let neighbourRange = 2;
-            let upperNeighbour = answerIndex + neighbourRange;
-            let lowerNeighbour = answerIndex - neighbourRange;
+            let upperNeighbour = solutionIndex + neighbourRange;
+            let lowerNeighbour = solutionIndex - neighbourRange;
 
-            // can't always put the correct answer in the middle of the range. Shift the
+            // can't always put the correct solution in the middle of the range. Shift the
             // range so that the answer might be in any position.
             let shiftAmount = Utility.getRandomInt(-neighbourRange, neighbourRange + 1);
             upperNeighbour += shiftAmount;
@@ -138,14 +138,14 @@ namespace RoteMath {
                 upperNeighbour++;
             }
 
-            while (upperNeighbour >= this.allPossibleAnswers.length) {
+            while (upperNeighbour >= this.allPossibleSolutions.length) {
                 upperNeighbour--;
                 lowerNeighbour--;
             }
 
             let result: number[] = [];
             for (let i = lowerNeighbour; i <= upperNeighbour; i++) {
-                result.push(this.allPossibleAnswers[i]);
+                result.push(this.allPossibleSolutions[i]);
             }
 
             return result;

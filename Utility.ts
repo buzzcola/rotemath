@@ -4,7 +4,7 @@ namespace RoteMath {
 
     export class Utility {
         static shuffleInPlace(array: any[]) {
-            // do the Fisher-Yates shuffle:
+            // do the Fisher-Yates shuffle!
             // https://stackoverflow.com/a/2450976/41457
             let currentIndex: number = array.length
             let temporaryValue: number;
@@ -33,6 +33,10 @@ namespace RoteMath {
             return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
         }
 
+        static coinToss<T>(option1:T, option2:T) : T {
+            return Math.random() >= 0.5 ? option2 : option1;
+        }
+        
         static range(size: number) {
             return [...Array(size).keys()];
         }
