@@ -22,7 +22,7 @@ I also chose to highlight the buttons around the correct answer. The goal is not
   * Rewrite the UI using a SPA framework. Probably React. At the moment the UI is just a bunch of materialize HTML/CSS and TypeScript. 
   * Links to study aids. Different kids learn differently - could just show them some tables to try and memorize visually, links to YouTube multiplication songs (they exist, and they are terrible.) Others?
   * I'd like to add a lot more game refinements: 
-  * I've read some teaching guides that recommend rearranging the problems a bit (e.g. 5 x _ = 20). Should be easy enough.
+  * (done) I've read some teaching guides that recommend rearranging the problems a bit (e.g. 5 x _ = 20). Should be easy enough.
   * (done) Visual indicator of incorrect answers. Allow player to keep guessing after an incorrect guess until they get the right one (no score for that though.)
   * (done) No points for a correct answer after X seconds. Player should be memorizing, not working out the products.
   * (done) Practice modes for individual digits.
