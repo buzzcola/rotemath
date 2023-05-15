@@ -1,6 +1,4 @@
 # rotemath
-I'd like to get ramped up on some modern front-end stuff for making a web version of Lightspeed. This should be fun as a learning exercise.
-
 The schools around here don't teach mathematics by rote anymore. I'm no expert in children's education and I like a lot of what they're 
 doing with algorithms and problem solving... but I can't quite accept my daughter not memorizing the times tables. So I told her
 I'd give her fifty bucks (basically one million dollars, to a nine year-old) if she could memorize the tables up to 12. Hopefully this game will help her.

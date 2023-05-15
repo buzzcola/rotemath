@@ -202,22 +202,6 @@ var RoteMath;
         GameState[GameState["GameOver"] = 4] = "GameOver";
     })(GameState = RoteMath.GameState || (RoteMath.GameState = {}));
     class Game {
-        constructor(args) {
-            this.ANSWER_MAX_MS = 5000; // time the player can correctly answer and still get a point.
-            this.ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
-            this._state = GameState.NotStarted; // state of the game.        
-            this.answers = []; // the user's answers.
-            let problems = RoteMath.Problem.makeProblems(args);
-            this.answers = [];
-            this.gameMode = args.gameMode;
-            this._maxScore = problems.length;
-            this.allPossibleSolutions = problems
-                .map(p => p.solution) // grab all answers
-                .filter((value, index, self) => self.indexOf(value) === index) // get distinct
-                .sort((a, b) => a - b); // sort
-            RoteMath.Utility.shuffleInPlace(problems);
-            this._problemStack = problems;
-        }
         get timeElapsed() {
             return (new Date()).getTime() - this._currentProblemStartTime.getTime();
         }
@@ -243,6 +227,22 @@ var RoteMath;
         }
         get state() {
             return this._state;
+        }
+        constructor(args) {
+            this.ANSWER_MAX_MS = 5000; // time the player can correctly answer and still get a point.
+            this.ANSWER_DELAY_MS = 1000; // time between correct answer and next problem popping up (the "victory lap").
+            this._state = GameState.NotStarted; // state of the game.        
+            this.answers = []; // the user's answers.
+            let problems = RoteMath.Problem.makeProblems(args);
+            this.answers = [];
+            this.gameMode = args.gameMode;
+            this._maxScore = problems.length;
+            this.allPossibleSolutions = problems
+                .map(p => p.solution) // grab all answers
+                .filter((value, index, self) => self.indexOf(value) === index) // get distinct
+                .sort((a, b) => a - b); // sort
+            RoteMath.Utility.shuffleInPlace(problems);
+            this._problemStack = problems;
         }
         start() {
             if (this.inState(GameState.NotStarted)) {
