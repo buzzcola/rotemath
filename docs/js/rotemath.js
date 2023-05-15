@@ -167,13 +167,39 @@ var RoteMath;
         static makeProblems(args) {
             let result = [];
             if (args.gameMode === RoteMath.GameMode.Competitive) {
-                return RoteMath.Utility.range2(args.max + 1)
+                const all = RoteMath.Utility.range2(args.max + 1)
                     .map(p => new Problem(args.problemType, p.x, p.y));
+                // let's trim out out some of theh zero and one problems. a 13x13 competitive
+                // set will have 25 "zero times something" and 25 "one times something", and
+                // we really don't need too many of those.
+                const maxZeroes = 3;
+                const maxOnes = 3;
+                let zeroes = 0;
+                let ones = 0;
+                RoteMath.Utility.shuffleInPlace(all);
+                all.forEach(p => {
+                    if (p.left == 0 || p.right == 0) {
+                        if (zeroes < maxZeroes) {
+                            zeroes++;
+                            result.push(p);
+                        }
+                    }
+                    else if (p.left == 1 || p.right == 1) {
+                        if (ones < maxOnes) {
+                            ones++;
+                            result.push(p);
+                        }
+                    }
+                    else {
+                        result.push(p);
+                    }
+                });
             }
             else {
-                return RoteMath.Utility.range(args.max + 1)
+                result = RoteMath.Utility.range(args.max + 1)
                     .map(x => new Problem(args.problemType, args.practiceDigit, x));
             }
+            return result;
         }
         toString() {
             return `${this.left} ${this.operator} ${this.right} = ${this.answer}`;
