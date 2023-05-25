@@ -281,6 +281,8 @@ namespace RoteMath {
             for (let right = minright; right <= maxright; right++) {
                 let cell = row.appendChild(document.createElement('td'));
                 let answer = answers.filter(a => a.problem.left === left && a.problem.right === right)[0];
+                
+                if(!answer) continue; // we're skipping some zero and ones to make things more fun.
 
                 cell.classList.add('tooltipped');
                 cell.setAttribute('data-position', 'bottom');
