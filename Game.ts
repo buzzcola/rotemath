@@ -56,6 +56,14 @@ namespace RoteMath {
             return this._maxScore;
         }
 
+        get problemCount() {
+            return this._maxScore;
+        }
+
+        get currentPosition() {
+            return this._maxScore - this._problemStack.length;
+        }
+
         get currentProblem() {
             return this._currentProblem;
         }

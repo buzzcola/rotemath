@@ -169,7 +169,7 @@ var RoteMath;
             if (args.gameMode === RoteMath.GameMode.Competitive) {
                 const all = RoteMath.Utility.range2(args.max + 1)
                     .map(p => new Problem(args.problemType, p.x, p.y));
-                // let's trim out out some of theh zero and one problems. a 13x13 competitive
+                // let's trim out out some of the zero and one problems. a 13x13 competitive
                 // set will have 25 "zero times something" and 25 "one times something", and
                 // we really don't need too many of those.
                 const maxZeroes = 3;
@@ -247,6 +247,12 @@ var RoteMath;
         }
         get maxScore() {
             return this._maxScore;
+        }
+        get problemCount() {
+            return this._maxScore;
+        }
+        get currentPosition() {
+            return this._maxScore - this._problemStack.length;
         }
         get currentProblem() {
             return this._currentProblem;
@@ -480,6 +486,7 @@ var RoteMath;
     let buttonContainer;
     let scoreContainer;
     let score;
+    let progress;
     let problem;
     let progressBar;
     let progressBackground;
@@ -514,6 +521,7 @@ var RoteMath;
         progressBackground = $$('#progressBackground');
         scoreContainer = $$('#scoreContainer');
         score = $$('#score');
+        progress = $$('#progress');
         buttonContainer = $$('#button-container');
         gameOverPanel = $$('#gameOver');
         gameOverMessage = $$('#gameOverMessage');
@@ -611,6 +619,7 @@ var RoteMath;
     }
     function onCorrectAnswer() {
         problem.innerHTML = game.currentProblem.questionUnmasked;
+        progress.innerHTML = game.currentPosition + " / " + game.problemCount;
         speech.speak('correct!');
     }
     function onScoreChanged() {

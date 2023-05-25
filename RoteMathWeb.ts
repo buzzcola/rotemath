@@ -31,6 +31,7 @@ namespace RoteMath {
     let buttonContainer: Element;
     let scoreContainer: Element;
     let score: Element;
+    let progress: Element;
     let problem: Element;
     let progressBar: HTMLDivElement;
     let progressBackground: HTMLDivElement;
@@ -70,6 +71,7 @@ namespace RoteMath {
         progressBackground = $$('#progressBackground');
         scoreContainer = $$('#scoreContainer');
         score = $$('#score');
+        progress = $$('#progress');
         buttonContainer = $$('#button-container');
         gameOverPanel = $$('#gameOver');
         gameOverMessage = $$('#gameOverMessage');
@@ -183,6 +185,7 @@ namespace RoteMath {
 
     function onCorrectAnswer() {
         problem.innerHTML = game.currentProblem.questionUnmasked;
+        progress.innerHTML = game.currentPosition + " / " + game.problemCount;
         speech.speak('correct!');
     }
 
