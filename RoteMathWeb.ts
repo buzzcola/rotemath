@@ -155,6 +155,7 @@ namespace RoteMath {
             speech.speechRecognition.onresult = onNumberSpeechRecognized;
         }
 
+        updateProgress();
         game.start();
     }
 
@@ -185,8 +186,12 @@ namespace RoteMath {
 
     function onCorrectAnswer() {
         problem.innerHTML = game.currentProblem.questionUnmasked;
-        progress.innerHTML = game.currentPosition + " / " + game.problemCount;
+        updateProgress();
         speech.speak('correct!');
+    }
+
+    function updateProgress() {
+        progress.innerHTML = game.currentPosition + " / " + game.problemCount;
     }
 
     function onScoreChanged() {

@@ -592,6 +592,7 @@ var RoteMath;
         if (speech.synthesisEnabled) {
             speech.speechRecognition.onresult = onNumberSpeechRecognized;
         }
+        updateProgress();
         game.start();
     }
     function onAnswerButtonClick() {
@@ -619,8 +620,11 @@ var RoteMath;
     }
     function onCorrectAnswer() {
         problem.innerHTML = game.currentProblem.questionUnmasked;
-        progress.innerHTML = game.currentPosition + " / " + game.problemCount;
+        updateProgress();
         speech.speak('correct!');
+    }
+    function updateProgress() {
+        progress.innerHTML = game.currentPosition + " / " + game.problemCount;
     }
     function onScoreChanged() {
         score.innerHTML = '' + game.score;
